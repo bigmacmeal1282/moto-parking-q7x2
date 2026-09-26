@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Moto Parking</title>
+<meta name="description" content="Motorcycle street parking rules for Greenwich Village and nearby NYC blocks, from NYC DOT sign records.">
+<meta name="theme-color" content="#161b22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Parking">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<script src="vendor/leaflet/leaflet.js"></script>
+<style>
+:root{--sat:env(safe-area-inset-top,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px)}
+html,body{margin:0;height:100%;overflow:hidden;background:#161b22;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+body{position:fixed;inset:0;display:flex;flex-direction:column}
+#wrap{position:relative;flex:1 1 auto;min-height:0}
+#map{position:absolute;inset:0;background:#ddd}
+#footer{flex:none;font-size:11px;line-height:14px;padding:6px calc(10px + var(--sar)) calc(6px + var(--sab)) calc(10px + var(--sal));background:#161b22;color:#e6e6e6}
+#footer .pulled{color:#9aa4b2;font-size:10.5px}
+.leaflet-top{top:var(--sat)}
+.leaflet-left{left:var(--sal)}
+.leaflet-right{right:var(--sar)}
+#panel{position:absolute;top:calc(10px + var(--sat));right:calc(10px + var(--sar));z-index:1000;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:8px 12px;max-width:260px;max-height:calc(100% - 90px - var(--sat));overflow:auto;font-size:14px;-webkit-overflow-scrolling:touch}
+#panel .hd{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;background:none;border:none;padding:4px 0;font:600 15px/1.2 inherit;font-family:inherit;color:#111;cursor:pointer;text-align:left}
+#panel .hd .chev{font-size:13px;transition:transform .15s;display:inline-block}
+#panel.collapsed .hd .chev{transform:rotate(-90deg)}
+#panel label{display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;min-height:30px}
+#panel input{width:22px;height:22px;margin:0;flex:none}
+.sw{display:inline-block;width:28px;height:8px;border-radius:4px;flex:none}
+#panel .small{font-size:11px;color:#555;margin-top:4px}
+#panel.collapsed .body{display:none}
+#panel.collapsed{padding:6px 12px}
+.btn{position:absolute;z-index:1000;left:calc(10px + var(--sal));background:#fff;color:#111;border:none;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:15px;padding:12px 14px;cursor:pointer;font-family:inherit}
+#locate{bottom:22px}
+#recenter{bottom:76px}
+.leaflet-popup-content{margin:12px 14px;font-size:14px;line-height:1.35;min-width:230px}
+.pp h4{margin:0 0 2px;font-size:16px}
+.pp .between{color:#444;margin-bottom:6px}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;color:#fff;font-size:12px;font-weight:600;margin-bottom:6px}
+.now{padding:6px 8px;border-radius:8px;margin:4px 0;background:#f2f2f2}
+.now b{font-size:15px}
+.pp ul{margin:4px 0 4px 18px;padding:0}
+.pp li{margin:2px 0}
+.pp .note{font-size:12px;color:#555}
+.yes{color:#1a7f37}.no{color:#c62828}
+@media (max-width:600px){#footer{font-size:10.5px}.leaflet-popup-content{min-width:200px}}
+#tabs{flex:none;display:flex;gap:6px;background:#161b22;padding:4px calc(8px + var(--sar)) calc(4px + var(--sab)) calc(8px + var(--sal))}
+#tabs button{flex:1;min-height:44px;border:none;border-radius:10px;background:#2a3140;color:#d5dbe3;font:600 15px/1 inherit;font-family:inherit}
+#tabs button.on{background:#2e9e44;color:#fff}
+#sheet{display:none;flex:none;max-height:60vh;overflow:auto;background:#f6f7f9;color:#111;-webkit-overflow-scrolling:touch;padding:8px calc(12px + var(--sar)) 8px calc(12px + var(--sal));border-top:1px solid #d8dee6}
+body.mode-bike #sheet{display:block}
+body.mode-bike #footer{display:none}
+body.mode-bike #panel{display:none}
+#sheet h2{font-size:17px;line-height:1.2;margin:2px 0}
+#sheet .between{color:#444;font-size:13px;margin:0 0 4px}
+#sheet .countdown{font-size:16px;font-weight:700;line-height:1.25;margin:4px 0}
+#sheet .countdown.now{color:#c62828}
+#sheet .countdown.ok{color:#145c2a}
+#sheet .countdown.unknown{color:#8a5a00}
+#sheet .sub{font-size:12.5px;color:#333;margin:0 0 6px}
+#sheet .rules{margin:0 0 6px 16px;padding:0;font-size:12.5px}
+#sheet .rules li{margin:1px 0}
+.actions{display:flex;gap:8px;margin:6px 0}
+.actions button,.park{min-height:44px;border:none;border-radius:10px;font:600 15px/1 inherit;font-family:inherit}
+.actions button{flex:1}
+.actions .primary,.park{background:#1b7f3a;color:#fff}
+.actions .ghost{background:#e6e9ee;color:#111}
+.park{width:100%;margin:0 0 8px}
+.segrow{display:flex;gap:6px;margin:4px 0 8px}
+.seg{flex:1;display:flex;background:#e6e9ee;border-radius:10px;padding:2px}
+.seg button{flex:1;min-height:34px;border:none;background:transparent;border-radius:8px;font:600 12px/1.1 inherit;font-family:inherit;color:#333}
+.seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.16)}
+#sheet h3{font-size:13px;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.03em;color:#444}
+.row{display:block;width:100%;text-align:left;background:#fff;border:1px solid #e1e4ea;border-radius:12px;padding:8px 10px;margin:0 0 6px;font:inherit;font-family:inherit;color:#111}
+.row.on{border-color:#1b7f3a;background:#f3faf5}
+.row .rt{font-size:14px;line-height:1.25}
+.row .rd{font-size:13px;margin-top:2px}
+.row .rs{font-size:12px;color:#555;margin-top:1px}
+.pill{display:inline-block;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:700;vertical-align:1px;margin-left:4px}
+.pill.once{background:#1b7f3a;color:#fff}
+.pill.meter{background:#4a6fa5;color:#fff}
+.pill.free{background:#e7f6ec;color:#146c2e}
+.note a{color:#1a4f8b}
+.numpin,.bikepin{background:transparent !important;border:none !important}
+.numpin span,.bikepin span{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font:800 12px/1 -apple-system,BlinkMacSystemFont,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.numpin span{width:22px;height:22px;background:#1b7f3a}
+.bikepin span{width:28px;height:28px;background:#111;font-size:13px}
+.empty{font-size:14px;line-height:1.35;margin:4px 0 8px}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="map"></div>
+<div id="panel"><button class="hd" id="tg" aria-expanded="true" aria-controls="filters"><span>Moto street parking</span><span class="chev">&#9660;</span></button>
+<div class="body" id="filters"></div></div>
+<button class="btn" id="recenter" title="Recenter on Washington Square Park">&#127919; Recenter</button>
+<button class="btn" id="locate" title="Locate me">&#128205; Locate me</button>
+</div>
+<div id="sheet" aria-live="polite"></div>
+<nav id="tabs">
+<button type="button" id="tabMap" class="on" aria-selected="true">Map</button>
+<button type="button" id="tabBike" aria-selected="false">My bike</button>
+</nav>
+<div id="footer">Built from NYC DOT sign records; the sign on the pole always wins. Motorcycles follow the same signs as cars. Alternate side is suspended on some holidays — see the My bike tab for the official calendar. <span class="pulled">Data pulled __DATE__.</span></div>
+<script>
+const DATA = __DATA__;
+const CENTER = [40.7308, -73.9973];
+const START_ZOOM = 16, RECENTER_ZOOM = 17;
+const CATS = {
+  green:{label:"Free anytime except street cleaning", color:"#2e9e44", on:true},
+  yellow:{label:"Free nights/weekends (timed rules)", color:"#f2b705", on:true},
+  meter:{label:"Metered (pay during posted hours)", color:"#4a6fa5", on:true},
+  red:{label:"No parking/standing (anytime)", color:"#d32f2f", on:false}
+};
+const SIDE = {N:"north",S:"south",E:"east",W:"west"};
+const DN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const WEEK = 10080;
+
+const map = L.map('map',{zoomControl:true, preferCanvas:true}).setView(CENTER, START_ZOOM);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, crossOrigin:true, attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+const renderer = L.canvas({tolerance:10});
+const SAFE_TOP = (()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;height:0;padding-top:env(safe-area-inset-top,0px)';document.body.appendChild(d);const v=parseFloat(getComputedStyle(d).paddingTop)||0;d.remove();return v;})();
+
+function nyParts(date){
+  const parts = new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'numeric',hour12:false,month:'numeric'}).formatToParts(date||new Date());
+  const o={}; parts.forEach(p=>o[p.type]=p.value);
+  const wd = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday);
+  let h = parseInt(o.hour,10)%24;
+  return {wd, month:parseInt(o.month,10), hm: wd*1440 + h*60 + parseInt(o.minute,10)};
+}
+function nyNow(){
+  if(typeof window.__NY_NOW==='number') return ((window.__NY_NOW%WEEK)+WEEK)%WEEK;
+  return nyParts().hm;
+}
+function monthIn(month, season){
+  const a=season[0], b=season[1];
+  return a<=b ? (month>=a && month<=b) : (month>=a || month<=b);
+}
+function fmtWM(m){
+  m=((m%WEEK)+WEEK)%WEEK;
+  const d=Math.floor(m/1440), t=m%1440, h=Math.floor(t/60), mi=t%60;
+  let s;
+  if(t===0) s="12 AM (midnight)"; else if(t===720) s="12 PM (noon)";
+  else s=((h%12)||12)+(mi?":"+String(mi).padStart(2,"0"):"")+(h<12?" AM":" PM");
+  return DN[d]+" "+s;
+}
+function fmtDur(min){
+  const d=Math.floor(min/1440), h=Math.floor((min%1440)/60), m=min%60;
+  const a=[]; if(d) a.push(d+"d"); if(h) a.push(h+"h"); if(!d && m) a.push(m+"m");
+  return a.length?a.join(" "):"under a minute";
+}
+// intervals: list of [start,end) week minutes, may be joined across week boundary
+function remAt(ivs,t){ t=((t%WEEK)+WEEK)%WEEK; for(const [a,b] of ivs){ if(t>=a && t<b) return b-t; } return 0; }
+function status(ivs, now){
+  let off=0, r;
+  while((r=remAt(ivs, now+off))>0 && off<WEEK) off+=r;
+  if(off>0) return {inside:true, endOffset:off};
+  let best=null;
+  for(const [a] of ivs){ const o=((a-now)%WEEK+WEEK)%WEEK; if(best===null||o<best) best=o; }
+  return {inside:false, nextOffset:best};
+}
+function popupHtml(f){
+  const now=nyNow();
+  const c=CATS[f.cat];
+  let restr=[], zone=[]; const meter=[];
+  const month=nyParts().month;
+  f.r.forEach(r=>{
+    if(r.a) return;
+    if(r.mo && !monthIn(month, r.mo)) return;
+    (r.t==="meter"?meter:(r.t==="restrict"?zone:restr)).push(...r.iv);
+  });
+  if(!restr.length && zone.length && f.cat!=="meter"){ restr=zone; zone=[]; }
+  let h=`<div class="pp"><h4>${f.on}, ${SIDE[f.side]} side</h4><div class="between">Between ${f.a} and ${f.b}</div>`;
+  h+=`<span class="badge" style="background:${c.color}">${c.label}</span>`;
+  let free, move, zoneLine="";
+  if(f.ok===0){
+    free=`Unknown, check signs`;
+    move=`Unknown, check signs`;
+  } else if(f.cat==="red"){
+    free=`<span class="no">No</span> (no parking or standing posted anytime)`;
+    move=`Do not park here`;
+  } else {
+    const s = restr.length? status(restr, now) : null;
+    const m = meter.length? status(meter, now) : null;
+    const meterUnknown = f.r.some(r=>r.t==="meter" && !r.iv.length);
+    if(s && s.inside){
+      free=`<span class="no">No</span> (rule in effect, ends ${fmtWM(now+s.endOffset)})`;
+      move=`<span class="no">Now</span> (OK again after ${fmtWM(now+s.endOffset)})`;
+    } else {
+      if(m && m.inside) free=`<span class="no">Paid</span> for the meter time limit (not all week) until ${fmtWM(now+m.endOffset)}`;
+      else if(meterUnknown && !meter.length) free=`Maybe (check the muni-meter for hours)`;
+      else free=`<span class="yes">Yes</span>`;
+      if(s && m && !m.inside && m.nextOffset!=null && m.nextOffset<s.nextOffset) move=`<b>${fmtWM(now+m.nextOffset)}</b>, then the meter starts`;
+      else if(s) move=`<b>${fmtWM(now+s.nextOffset)}</b> (in ${fmtDur(s.nextOffset)})`;
+      else if(m && m.inside) move=`The meter time limit (usually 1–2 hours), not all week`;
+      else if(m && !m.inside) move=`<b>${fmtWM(now+m.nextOffset)}</b>, then the meter starts`;
+      else if(meterUnknown) move=`Check the muni-meter (hours are not in the DOT data)`;
+      else move=`No posted time rule; 7-day max applies`;
+    }
+    if(m && !m.inside && m.nextOffset!==null) free+=`<div class="note">Meter starts ${fmtWM(now+m.nextOffset)}. After that it is a short paid stay.</div>`;
+    if(meterUnknown && !meter.length) free+=`<div class="note">Pay-by-cell meter. Check the muni-meter for hours. This is not a week-long spot.</div>`;
+    if(zone.length){
+      const z=status(zone, now);
+      zoneLine = z.inside ? `<div class="note">Loading/commercial zone section of this block: off limits now until ${fmtWM(now+z.endOffset)}.</div>`
+                          : `<div class="note">Loading/commercial zone section of this block: next off limits ${fmtWM(now+z.nextOffset)}.</div>`;
+    }
+  }
+  h+=`<div class="now">Free right now: <b>${free}</b></div>`;
+  h+=`<div class="now">You must move by: ${move}</div>`+zoneLine;
+  h+=`<div><b>Posted rules</b> (from DOT sign records):</div><ul>`;
+  f.r.forEach(r=>{ h+=`<li>${r.x}${r.a && f.cat!=="red"?' <span class="note">(covers part of the block, usually near a corner, hydrant, or bus stop)</span>':''}</li>`; });
+  h+=`</ul><div class="note">NYC rule: you may not leave a vehicle in the same spot more than 7 days. ${f.n} sign record(s) on this block side. Times are New York time.</div></div>`;
+  return h;
+}
+const layers={};
+Object.keys(CATS).forEach(k=>layers[k]=L.layerGroup());
+DATA.forEach(f=>{
+  const ln=L.polyline(f.c,{color:CATS[f.cat].color, weight:7, opacity:f.cat==="red"?0.75:0.9, lineCap:"butt", renderer});
+  ln.bindPopup(()=>popupHtml(f),{maxWidth:320, autoPanPaddingTopLeft:[10,10+SAFE_TOP]});
+  ln.on('click', ()=>{ if(document.body.classList.contains('mode-bike')){ setBike(f.id, true); setTimeout(()=>map.closePopup(), 0); } });
+  ln.addTo(layers[f.cat]);
+});
+const counts={}; DATA.forEach(f=>counts[f.cat]=(counts[f.cat]||0)+1);
+const fl=document.getElementById('filters');
+["green","yellow","meter","red"].forEach(k=>{
+  const c=CATS[k];
+  const lab=document.createElement('label');
+  lab.innerHTML=`<input type="checkbox" ${c.on?"checked":""}><span class="sw" style="background:${c.color}"></span><span>${c.label} <small>(${counts[k]||0})</small></span>`;
+  const cb=lab.querySelector('input');
+  cb.addEventListener('change',()=>{ cb.checked? layers[k].addTo(map) : map.removeLayer(layers[k]); });
+  if(c.on) layers[k].addTo(map);
+  fl.appendChild(lab);
+});
+fl.insertAdjacentHTML('beforeend','<div class="small">Tap a colored block side for rules and when you must move. The My bike tab saves a spot and counts down to the next restriction. Mixed blocks use the most restrictive timed rule. Data: NYC Open Data nfid-uabd + LION centerline, pulled __DATE__.</div>');
+const panel=document.getElementById('panel'), tg=document.getElementById('tg');
+function setCollapsed(c){ panel.classList.toggle('collapsed',c); tg.setAttribute('aria-expanded',String(!c)); }
+tg.onclick=()=>setCollapsed(!panel.classList.contains('collapsed'));
+setCollapsed(window.matchMedia('(max-width:600px)').matches);
+
+document.getElementById('recenter').onclick=()=>map.setView(CENTER,RECENTER_ZOOM);
+let me=null, meC=null;
+function showMe(ll, accuracy){
+  userLL=ll;
+  if(me){me.setLatLng(ll);meC.setLatLng(ll).setRadius(accuracy||20);} else {
+    meC=L.circle(ll,{radius:accuracy||20,color:'#1976d2',weight:1,fillOpacity:.1,interactive:false,renderer}).addTo(map);
+    me=L.circleMarker(ll,{radius:8,color:'#fff',weight:3,fillColor:'#1976d2',fillOpacity:1,interactive:false,renderer}).addTo(map);
+  }
+  map.setView(ll,17);
+}
+document.getElementById('locate').onclick=()=>{
+  if(!navigator.geolocation){alert('Location not available on this device');return;}
+  navigator.geolocation.getCurrentPosition(p=>{
+    showMe([p.coords.latitude,p.coords.longitude], p.coords.accuracy);
+    if(document.body.classList.contains('mode-bike')) renderAll(false);
+  },e=>alert('Could not get location: '+e.message),{enableHighAccuracy:true,timeout:15000});
+};
+const LS_KEY='motoParking.bike.v1';
+const WALK_M_PER_MIN=80, MAX_WALK=15, PLAN_WALK=12, MAX_STAY=7*1440, MIN_STAY=45;
+const DNs=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const BYID={}; DATA.forEach(f=>{ if(f.id) BYID[f.id]=f; });
+let bikeId=null;
+try{ bikeId=localStorage.getItem(LS_KEY); }catch(e){}
+if(bikeId && !BYID[bikeId]) bikeId=null;
+let userLL=null, distFrom='bike', rankAt='move', focusId=null, locMsg='', mode='map';
+const hiLayer=L.layerGroup().addTo(map);
+let lastRows=[];
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtShort(m){
+  m=((m%WEEK)+WEEK)%WEEK;
+  const d=Math.floor(m/1440), t=m%1440, h=Math.floor(t/60), mi=t%60, ap=h<12?'am':'pm', hr=(h%12)||12;
+  return DNs[d]+' '+hr+(mi?':'+String(mi).padStart(2,'0'):'')+ap;
+}
+function fmtDurCompact(min){
+  min=Math.max(0, Math.round(min));
+  if(min>=60){
+    const rounded=Math.round(min/60)*60;
+    const d=Math.floor(rounded/1440), h=Math.round((rounded%1440)/60);
+    const hh=h===24?0:h, dd=h===24?d+1:d;
+    if(dd && hh) return dd+'d '+hh+'h';
+    if(dd) return dd+'d';
+    if(hh) return hh+'h';
+  }
+  if(min) return min+'m';
+  return 'under 1m';
+}
+function mergeIv(iv){
+  const s=iv.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]), out=[];
+  for(const [a,b] of s){
+    if(b<=a) continue;
+    if(out.length && a<=out[out.length-1][1]) out[out.length-1][1]=Math.max(out[out.length-1][1], b);
+    else out.push([a,b]);
+  }
+  return out;
+}
+function prohibIv(f){
+  if(!f || f.ok===0) return null;
+  const month=nyParts().month, iv=[];
+  for(const r of f.r){
+    if(r.a || r.t==='meter') continue;
+    if(r.mo && !monthIn(month, r.mo)) continue;
+    if(r.ok===0) return null;
+    for(const seg of (r.iv||[])) iv.push(seg);
+  }
+  return mergeIv(iv);
+}
+function meterLimitMin(text){
+  const m=/(\d+)-(hour|min)/.exec(text||'');
+  if(!m) return null;
+  return m[2]==='hour' ? (+m[1])*60 : +m[1];
+}
+function meterInfo(f){
+  const month=nyParts().month, iv=[];
+  let unknown=false, limit=null, has=f.cat==='meter';
+  for(const r of f.r){
+    if(r.t!=='meter') continue;
+    has=true;
+    if(r.mo && !monthIn(month, r.mo)) continue;
+    const lim=meterLimitMin(r.x);
+    if(lim) limit=lim;
+    if(!r.iv || !r.iv.length) unknown=true;
+    else if(!r.a) for(const seg of r.iv) iv.push(seg);
+  }
+  return {has, unknown, iv:mergeIv(iv), limitMin: limit||120};
+}
+// How long a bike can legally sit, starting at minute t.
+// Metered sides are free only until meter hours begin. During meter hours
+// the stay is the posted time limit (usually 1–2 hours), not the rest of the week.
+function stayFrom(f, t){
+  const iv=prohibIv(f);
+  if(iv===null) return {kind:'unknown', metered:false, freeStay:0};
+  const insideProhib=iv.length && status(iv, t).inside;
+  if(insideProhib){
+    const st=status(iv, t);
+    return {kind:'blocked', metered:f.cat==='meter', freeStay:0, endOffset:st.endOffset};
+  }
+  const prohibWait=iv.length ? status(iv, t).nextOffset : MAX_STAY;
+  const meter=meterInfo(f);
+  if(!meter.has){
+    const stay=Math.min(prohibWait, MAX_STAY);
+    return {kind:'free', metered:false, freeStay:stay, goodAt:(t+stay)%WEEK, capped:prohibWait>=MAX_STAY, limitMin:null};
+  }
+  if(meter.unknown || !meter.iv.length){
+    const stay=iv.length ? Math.min(prohibWait, MAX_STAY) : 0;
+    return {kind:'unknown-meter', metered:true, unknown:true, freeStay:0, prohibStay:stay, goodAt:iv.length?(t+stay)%WEEK:null, capped:false, limitMin:null};
+  }
+  const st=status(meter.iv, t);
+  if(st.inside){
+    const paid=Math.min(meter.limitMin, st.endOffset, prohibWait);
+    return {kind:'paid', metered:true, freeStay:0, paidStay:paid, goodAt:(t+paid)%WEEK, limitMin:meter.limitMin, capped:false};
+  }
+  const untilMeter=st.nextOffset;
+  const stay=Math.min(untilMeter, prohibWait, MAX_STAY);
+  const meterFirst=untilMeter<prohibWait && untilMeter<MAX_STAY;
+  return {kind:meterFirst?'then-meter':'free', metered:true, freeStay:stay, goodAt:(t+stay)%WEEK, limitMin:meter.limitMin, capped:false};
+}
+function meterState(f, t){
+  const meter=meterInfo(f);
+  if(!meter.has) return {text:''};
+  if(meter.unknown || !meter.iv.length) return {text:'Metered. Hours are not in the DOT data — check the muni-meter. Do not assume a week-long stay.'};
+  const st=status(meter.iv, t);
+  const hrs=meter.limitMin%60 ? (meter.limitMin+' min') : ((meter.limitMin/60)+'-hour');
+  if(st.inside) return {text:'Metered now. Paid stay is the '+hrs+' limit, not the rest of the week.'};
+  return {text:'Free until the meter starts '+fmtShort(t+st.nextOffset)+'. After that it is a short paid stay.'};
+}
+function describeSpot(f, now){
+  if(!f) return {kind:'none', headline:'', depart:now};
+  if(f.cat==='red') return {kind:'now', headline:'Move now', detail:'No parking or standing anytime.', depart:now, freeStay:0};
+  const w=stayFrom(f, now);
+  if(w.kind==='unknown') return {kind:'unknown', headline:'Unknown, check signs', detail:'This side did not parse confidently.', depart:now, freeStay:0};
+  if(w.kind==='blocked') return {kind:'now', headline:'Move now', detail:'Restriction ends '+fmtShort(now+w.endOffset)+'.', depart:now, freeStay:0};
+  if(w.kind==='unknown-meter' && !w.prohibStay) return {kind:'unknown', headline:'Metered, check the muni-meter', detail:'Hours are not in the DOT data, so this is not a week-long spot.', depart:now, freeStay:0};
+  if(w.kind==='paid'){
+    const hrs=w.limitMin%60 ? (w.limitMin+' min') : ((w.limitMin/60)+'-hour');
+    return {kind:'move', headline:'Move by '+fmtShort(now+w.paidStay)+', '+fmtDurCompact(w.paidStay)+' from now', detail:hrs+' meter limit (paid), not an all-week stay.', depart:now+w.paidStay, freeStay:0};
+  }
+  if(w.kind==='unknown-meter'){
+    return {kind:'move', headline:'Move by '+fmtShort(now+w.prohibStay)+', '+fmtDurCompact(w.prohibStay)+' from now', detail:'Also metered, and the hours are not in the DOT data. Check the muni-meter — it may start sooner.', depart:now+w.prohibStay, freeStay:0};
+  }
+  const wait=w.freeStay;
+  let detail=fmtDurCompact(wait)+' from now';
+  if(w.capped) detail+=' (7-day limit; the next sign is later)';
+  const thenMeter=w.kind==='then-meter' ? ', then meter' : '';
+  return {kind:w.capped?'limit':'move', headline:'Move by '+fmtShort(now+wait)+thenMeter+', '+detail, detail, depart:now+wait, freeStay:wait, wait};
+}
+function xyMeters(lat, lon, lat0, lon0){
+  return [(lon-lon0)*111320*Math.cos(lat0*Math.PI/180), (lat-lat0)*111320];
+}
+function distPointSeg(lat, lon, a, b){
+  const A=xyMeters(a[0], a[1], lat, lon), B=xyMeters(b[0], b[1], lat, lon);
+  const dx=B[0]-A[0], dy=B[1]-A[1], L2=dx*dx+dy*dy;
+  let t=L2? (-A[0]*dx + -A[1]*dy)/L2 : 0;
+  t=Math.max(0, Math.min(1, t));
+  return Math.hypot(A[0]+t*dx, A[1]+t*dy);
+}
+function distToFeature(lat, lon, f){
+  let best=Infinity; const c=f.c||[];
+  for(let i=1;i<c.length;i++) best=Math.min(best, distPointSeg(lat, lon, c[i-1], c[i]));
+  if(c.length<2 && c.length) best=Math.hypot(...xyMeters(c[0][0], c[0][1], lat, lon));
+  return best;
+}
+function walkMin(meters){ return Math.max(1, Math.round(meters/WALK_M_PER_MIN)); }
+function originLL(){
+  if(distFrom==='me' && userLL) return {ll:userLL, label:'you'};
+  if(BYID[bikeId]) return {ll:BYID[bikeId].m||midpoint(BYID[bikeId]), label:'your bike'};
+  if(userLL) return {ll:userLL, label:'you'};
+  return {ll:CENTER, label:'Washington Square'};
+}
+function midpoint(f){ return f.m || f.c[Math.floor(f.c.length/2)]; }
+function nearestFeature(ll, maxMeters){
+  let best=null, bestD=maxMeters;
+  for(const f of DATA){
+    const d=distToFeature(ll[0], ll[1], f);
+    if(d<bestD){ best=f; bestD=d; }
+  }
+  return best;
+}
+function rankSuggestions(now){
+  const origin=originLL();
+  const depart=(rankAt==='move' && BYID[bikeId]) ? describeSpot(BYID[bikeId], now).depart : now;
+  const rows=[];
+  for(const f of DATA){
+    if(f.id===bikeId || f.cat==='red' || f.ok===0) continue;
+    const iv=prohibIv(f);
+    if(iv===null) continue;
+    const meters=distToFeature(origin.ll[0], origin.ll[1], f);
+    const walk=walkMin(meters);
+    if(walk>MAX_WALK) continue;
+    const arrival=depart+walk;
+    const w=stayFrom(f, arrival);
+    if(!w || w.kind==='blocked' || w.kind==='unknown') continue;
+    // Free stay is what you get without paying. A meter running now is only
+    // a short paid stay, so it does not count as free time.
+    if(w.freeStay<MIN_STAY) continue;
+    rows.push({f, walk, stay:w.freeStay, capped:!!w.capped, goodAt:w.goodAt, kind:w.kind, metered:!!w.metered, limitMin:w.limitMin||null, once:!!f.once});
+  }
+  rows.sort((a,b)=>(b.once-a.once) || (b.stay-a.stay) || ((a.metered?1:0)-(b.metered?1:0)) || (a.walk-b.walk));
+  return {rows:rows.slice(0,8), origin, depart};
+}
+function longestGap(iv){
+  let best=null;
+  for(let i=0;i<iv.length;i++){
+    const end=iv[i][1];
+    const next=iv[(i+1)%iv.length][0] + (i+1===iv.length?WEEK:0);
+    const gap=next-end;
+    if(!best || gap>best.gap) best={gap, parkAt:end%WEEK, stay:Math.min(gap, MAX_STAY), capped:gap>MAX_STAY, goodAt:(end+Math.min(gap, MAX_STAY))%WEEK};
+  }
+  return best;
+}
+function weeklyPlan(){
+  const strict=[];
+  for(const f of DATA){
+    if(!f.plan || f.ok===0 || f.id===bikeId) continue;
+    const walk=walkMin(distToFeature(CENTER[0], CENTER[1], f));
+    if(walk>PLAN_WALK) continue;
+    const iv=prohibIv(f);
+    if(!iv || !iv.length) continue;
+    const gap=longestGap(iv);
+    if(!gap || gap.gap<6*1440) continue;
+    strict.push(Object.assign({f, walk}, gap));
+  }
+  strict.sort((a,b)=>a.walk-b.walk || b.gap-a.gap);
+  return strict.slice(0,5);
+}
+function cleaningStretches(){
+  const rows=[];
+  for(const f of DATA){
+    if(f.cat==='red' || f.ok===0 || f.cat==='meter' || f.id===bikeId) continue;
+    if(!f.r.some(r=>r.t==='clean' && !r.a && r.iv && r.iv.length)) continue;
+    const iv=prohibIv(f);
+    if(!iv || !iv.length) continue;
+    const walk=walkMin(distToFeature(CENTER[0], CENTER[1], f));
+    if(walk>PLAN_WALK) continue;
+    const gap=longestGap(iv);
+    if(!gap) continue;
+    rows.push(Object.assign({f, walk}, gap));
+  }
+  rows.sort((a,b)=>b.gap-a.gap || a.walk-b.walk);
+  return rows.slice(0,4);
+}
+function sideLabel(f){ return f.on+', '+SIDE[f.side]+' side'; }
+function pills(f){
+  let h='';
+  if(f.once) h+='<span class="pill once">Once a week</span>';
+  if(f.cat==='meter') h+='<span class="pill meter">Metered</span>';
+  else if(f.cat==='green') h+='<span class="pill free">Free</span>';
+  return h;
+}
+function sugRow(s, i){
+  const f=s.f, on=focusId===f.id?' on':'';
+  let mid;
+  if(s.kind==='then-meter') mid=s.walk+' min walk · Good until '+fmtShort(s.goodAt)+', then meter';
+  else if(s.kind==='unknown-meter') mid=s.walk+' min walk · Metered, check the muni-meter';
+  else if(s.kind==='paid') mid=s.walk+' min walk · Paid, '+(s.limitMin/60)+'-hour meter limit';
+  else mid=s.walk+' min walk · Good until '+fmtShort(s.goodAt)+' · '+(s.capped?'7-day limit':fmtDurCompact(s.stay));
+  const park=focusId===f.id ? '<button type="button" class="park" data-act="park" data-id="'+esc(f.id)+'">I parked here</button>' : '';
+  return '<button type="button" class="row'+on+'" data-act="focus" data-id="'+esc(f.id)+'">'+
+    '<div class="rt"><b>'+i+'. '+esc(sideLabel(f))+'</b> '+pills(f)+'</div>'+
+    '<div class="rd">'+esc(mid)+'</div>'+
+    '<div class="rs">Between '+esc(f.a)+' and '+esc(f.b)+'</div></button>'+park;
+}
+function planRow(s){
+  const f=s.f, on=focusId===f.id?' on':'';
+  const park=focusId===f.id ? '<button type="button" class="park" data-act="park" data-id="'+esc(f.id)+'">I parked here</button>' : '';
+  return '<button type="button" class="row'+on+'" data-act="focus" data-id="'+esc(f.id)+'">'+
+    '<div class="rt"><b>'+esc(sideLabel(f))+'</b> '+pills(f)+'</div>'+
+    '<div class="rd">Park after '+esc(fmtShort(s.parkAt))+' · '+s.walk+' min from Washington Square</div>'+
+    '<div class="rs">Between '+esc(f.a)+' and '+esc(f.b)+' · good until '+esc(fmtShort(s.goodAt))+' · '+esc(s.capped?'7-day limit':fmtDurCompact(s.stay))+'</div></button>'+park;
+}
+function renderSheet(){
+  const el=document.getElementById('sheet');
+  const y=el.scrollTop;
+  const now=nyNow();
+  const f=BYID[bikeId];
+  const ranked=rankSuggestions(now);
+  lastRows=ranked.rows;
+  let html='';
+  if(!f){
+    html+='<h2>Where\'s my bike?</h2><p class="empty">Tap a block side on the map, or snap to the nearest side from your location. The spot stays on this phone until you clear it.</p>';
+  } else {
+    const d=describeSpot(f, now);
+    const cls=d.kind==='now'?' now':(d.kind==='unknown'?' unknown':' ok');
+    html+='<h2>'+esc(sideLabel(f))+'</h2><div class="between">Between '+esc(f.a)+' and '+esc(f.b)+'</div>';
+    html+='<div class="countdown'+cls+'">'+esc(d.headline)+'</div>';
+    if(d.detail && d.headline.indexOf(d.detail)===-1) html+='<p class="sub">'+esc(d.detail)+'</p>';
+    if(f.once) html+='<p class="sub"><span class="pill once">Once a week</span> Street cleaning is one day a week.</p>';
+    const meter=meterState(f, now);
+    if(meter.text) html+='<p class="sub">'+esc(meter.text)+'</p>';
+    const rules=f.r.filter(r=>!r.a);
+    if(rules.length){
+      html+='<ul class="rules">';
+      rules.forEach(r=>{ html+='<li>'+esc(r.x)+'</li>'; });
+      html+='</ul>';
+    }
+    const partial=f.r.filter(r=>r.a).length;
+    if(partial) html+='<p class="sub">'+partial+' anytime sign(s) on part of this side (corner, hydrant, or bus stop).</p>';
+  }
+  html+='<div class="actions"><button type="button" class="primary" data-act="loc">Use my location</button><button type="button" class="ghost" data-act="clear"'+(f?'':' disabled')+'>Clear spot</button></div>';
+  if(locMsg) html+='<p class="sub">'+esc(locMsg)+'</p>';
+  html+='<div class="segrow"><div class="seg" role="group" aria-label="Walking distance from">'+
+    '<button type="button" data-act="dist" data-val="bike" class="'+(distFrom==='bike'?'on':'')+'">From bike</button>'+
+    '<button type="button" data-act="dist" data-val="me" class="'+(distFrom==='me'?'on':'')+'">From me</button></div>'+
+    '<div class="seg" role="group" aria-label="When to count the stay">'+
+    '<button type="button" data-act="rank" data-val="move" class="'+(rankAt==='move'?'on':'')+'">At move time</button>'+
+    '<button type="button" data-act="rank" data-val="now" class="'+(rankAt==='now'?'on':'')+'">Right now</button></div></div>';
+  const fromLabel=ranked.origin.label;
+  html+='<h3 id="suggestions">Where to move it</h3>';
+  html+='<p class="sub">Within '+MAX_WALK+' min of '+esc(fromLabel)+', from '+(rankAt==='move'&&f?'when you have to move':'now')+'. Free sides rank above meters unless the meter is free for longer.</p>';
+  if(!ranked.rows.length) html+='<p class="empty">No legal side within a '+MAX_WALK+' minute walk at that time.</p>';
+  ranked.rows.forEach((s,i)=>{ html+=sugRow(s, i+1); });
+  const plans=weeklyPlan();
+  const stretches=plans.length?[]:cleaningStretches();
+  html+='<h3 id="weekly">Weekly plan</h3>';
+  if(plans.length){
+    html+='<p class="sub">Park right after cleaning ends and stay about 7 days. These are within a '+PLAN_WALK+' minute walk of Washington Square.</p>';
+    plans.forEach(s=>{ html+=planRow(s); });
+  } else {
+    html+='<p class="sub">No once-a-week sides in this area; best is about 3 to 4 days (Mon/Thu cleaning).</p>';
+    html+='<p class="sub">Longest free stretches within a '+PLAN_WALK+' minute walk of Washington Square, if you park right after cleaning ends:</p>';
+    if(!stretches.length) html+='<p class="empty">No cleaning-only side in that walk.</p>';
+    stretches.forEach(s=>{ html+=planRow(s); });
+  }
+  html+='<p class="sub note">NYC suspends alternate side parking on some holidays. This app does not hard-code that calendar. Check <a href="https://www.nyc.gov/site/finance/vehicles/alternate-side-parking.page" target="_blank" rel="noopener">NYC\'s ASP calendar</a> or <a href="https://x.com/NYCASP" target="_blank" rel="noopener">@NYCASP</a> before you move. Times are New York time. Motorcycles follow the same street rules as cars.</p>';
+  el.innerHTML=html;
+  el.scrollTop=y;
+}
+function drawHi(){
+  hiLayer.clearLayers();
+  if(mode!=='bike'){
+    const f=BYID[bikeId];
+    if(f){
+      const icon=L.divIcon({className:'bikepin', html:'<span>B</span>', iconSize:[28,28], iconAnchor:[14,14]});
+      hiLayer.addLayer(L.marker(midpoint(f), {icon, interactive:false, zIndexOffset:800}));
+    }
+    return;
+  }
+  lastRows.forEach((s,i)=>{
+    const f=s.f;
+    hiLayer.addLayer(L.polyline(f.c,{color:'#fff', weight:12, opacity:.95, interactive:false, renderer}));
+    hiLayer.addLayer(L.polyline(f.c,{color:CATS[f.cat].color, weight:6, opacity:1, interactive:false, renderer}));
+    const icon=L.divIcon({className:'numpin', html:'<span>'+(i+1)+'</span>', iconSize:[22,22], iconAnchor:[11,11]});
+    const mk=L.marker(midpoint(f), {icon, zIndexOffset:600});
+    mk.on('click', ()=>{ focusId=f.id; map.setView(midpoint(f), 18); renderAll(false); });
+    hiLayer.addLayer(mk);
+  });
+  const f=BYID[bikeId];
+  if(f){
+    hiLayer.addLayer(L.polyline(f.c,{color:'#111', weight:14, opacity:.9, interactive:false, renderer}));
+    hiLayer.addLayer(L.polyline(f.c,{color:CATS[f.cat].color, weight:7, opacity:1, interactive:false, renderer}));
+    const icon=L.divIcon({className:'bikepin', html:'<span>B</span>', iconSize:[28,28], iconAnchor:[14,14]});
+    hiLayer.addLayer(L.marker(midpoint(f), {icon, interactive:false, zIndexOffset:900}));
+  }
+}
+function renderAll(pan){
+  renderSheet();
+  drawHi();
+  if(pan && BYID[bikeId]) map.setView(midpoint(BYID[bikeId]), Math.max(map.getZoom(), 17));
+  setTimeout(()=>map.invalidateSize(), 60);
+}
+function setMode(next, pan){
+  mode=next;
+  document.body.classList.toggle('mode-bike', next==='bike');
+  document.getElementById('tabMap').classList.toggle('on', next==='map');
+  document.getElementById('tabBike').classList.toggle('on', next==='bike');
+  document.getElementById('tabMap').setAttribute('aria-selected', String(next==='map'));
+  document.getElementById('tabBike').setAttribute('aria-selected', String(next==='bike'));
+  if(next==='bike') history.replaceState(null, '', '#bike');
+  else history.replaceState(null, '', location.pathname+location.search);
+  renderAll(!!pan);
+}
+function setBike(id, pan){
+  if(!BYID[id]) return;
+  bikeId=id; focusId=null; locMsg='';
+  try{ localStorage.setItem(LS_KEY, id); }catch(e){}
+  if(mode!=='bike') setMode('bike', true);
+  else renderAll(pan!==false);
+}
+function clearBike(){
+  bikeId=null; focusId=null; locMsg='';
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+  renderAll(false);
+}
+function ensureLocation(then){
+  if(userLL){ then(); return; }
+  if(!navigator.geolocation){ locMsg='Location is not available on this device.'; renderAll(false); return; }
+  navigator.geolocation.getCurrentPosition(p=>{
+    showMe([p.coords.latitude, p.coords.longitude], p.coords.accuracy);
+    locMsg='';
+    then();
+  }, e=>{ locMsg='Could not get location: '+e.message; renderAll(false); }, {enableHighAccuracy:true, timeout:15000, maximumAge:10000});
+}
+function useLocation(){
+  ensureLocation(()=>{
+    const near=nearestFeature(userLL, 160);
+    if(!near){ locMsg='No mapped block side within about 160 m. Tap the side on the map.'; renderAll(false); return; }
+    locMsg='';
+    setBike(near.id, true);
+  });
+}
+document.getElementById('sheet').addEventListener('click', e=>{
+  const t=e.target.closest('[data-act]');
+  if(!t) return;
+  const act=t.dataset.act;
+  if(act==='loc') useLocation();
+  else if(act==='clear') clearBike();
+  else if(act==='dist'){
+    distFrom=t.dataset.val;
+    if(distFrom==='me' && !userLL){ ensureLocation(()=>renderAll(false)); return; }
+    renderAll(false);
+  } else if(act==='rank'){ rankAt=t.dataset.val; renderAll(false); }
+  else if(act==='focus'){ focusId=t.dataset.id; const g=BYID[focusId]; if(g) map.setView(midpoint(g), 18); renderAll(false); }
+  else if(act==='park') setBike(t.dataset.id, true);
+});
+document.getElementById('tabMap').onclick=()=>setMode('map', false);
+document.getElementById('tabBike').onclick=()=>setMode('bike', true);
+setInterval(()=>{ if(mode==='bike') renderAll(false); }, 30000);
+if(location.hash==='#bike' || bikeId){
+  /* Bike marker shows on the map once a spot is saved. Open the tab only from the hash. */
+  if(bikeId) drawHi();
+}
+if(location.hash==='#bike') setMode('bike', true);
+window.MOTO={setBike, clearBike, describeSpot, stayFrom, rankSuggestions, weeklyPlan, cleaningStretches, nyNow, BYID, renderAll, getBike(){return bikeId;}};
+
+window.addEventListener('resize',()=>map.invalidateSize());
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('SW registration failed',e)));
+}
+</script>
+</body>
+</html>
