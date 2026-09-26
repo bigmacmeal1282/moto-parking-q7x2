@@ -6,7 +6,7 @@ GitHub Pages serves this repository from the root of `main`.
 
 Block sides are green (free except street cleaning), yellow (free nights and weekends), blue (metered), or red (no parking or standing). Tap a side for the posted rules. Recenter returns to Washington Square Park (40.7308, -73.9973).
 
-The My bike tab saves the side where the motorcycle is parked (tap the map, or snap from the phone's location). The spot is stored in local storage. The tab counts down, in New York time, to the next restriction and lists nearby legal sides. Metered sides are allowed outside meter hours and marked paid during them. A side is badged once-a-week only when street cleaning falls on a single weekday and nothing else forces a midweek move. If a sign cannot be parsed confidently, the tab says to check the signs.
+The My bike tab saves the side where the motorcycle is parked (tap the map, or snap from the phone's location). The spot is stored in local storage. The tab counts down, in New York time, to the next restriction and lists nearby legal sides. A metered side is free until meter hours start, then only a short paid stay (usually 1–2 hours), not all week. Pay-by-cell sides whose hours are missing say to check the muni-meter. A side is badged once-a-week only when street cleaning falls on a single weekday and nothing else forces a midweek move. If a sign cannot be parsed confidently, the tab says to check the signs.
 
 NYC suspends alternate side parking on some holidays. The app links to the [official ASP calendar](https://www.nyc.gov/site/finance/vehicles/alternate-side-parking.page) and [@NYCASP](https://x.com/NYCASP) instead of hard-coding those days.
 

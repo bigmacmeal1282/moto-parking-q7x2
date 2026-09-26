@@ -194,13 +194,18 @@ function popupHtml(f){
       free=`<span class="no">No</span> (rule in effect, ends ${fmtWM(now+s.endOffset)})`;
       move=`<span class="no">Now</span> (OK again after ${fmtWM(now+s.endOffset)})`;
     } else {
-      if(m && m.inside) free=`<span class="no">No</span>, meter running until ${fmtWM(now+m.endOffset)} (pay to park)`;
+      if(m && m.inside) free=`<span class="no">Paid</span> for the meter time limit (not all week) until ${fmtWM(now+m.endOffset)}`;
       else if(meterUnknown && !meter.length) free=`Maybe (check the muni-meter for hours)`;
       else free=`<span class="yes">Yes</span>`;
-      if(s){ move=`<b>${fmtWM(now+s.nextOffset)}</b> (in ${fmtDur(s.nextOffset)})`; }
+      if(s && m && !m.inside && m.nextOffset!=null && m.nextOffset<s.nextOffset) move=`<b>${fmtWM(now+m.nextOffset)}</b>, then the meter starts`;
+      else if(s) move=`<b>${fmtWM(now+s.nextOffset)}</b> (in ${fmtDur(s.nextOffset)})`;
+      else if(m && m.inside) move=`The meter time limit (usually 1–2 hours), not all week`;
+      else if(m && !m.inside) move=`<b>${fmtWM(now+m.nextOffset)}</b>, then the meter starts`;
+      else if(meterUnknown) move=`Check the muni-meter (hours are not in the DOT data)`;
       else move=`No posted time rule; 7-day max applies`;
     }
-    if(m && !m.inside && m.nextOffset!==null && f.cat==="meter") free+=`<div class="note">Meter starts ${fmtWM(now+m.nextOffset)}</div>`;
+    if(m && !m.inside && m.nextOffset!==null) free+=`<div class="note">Meter starts ${fmtWM(now+m.nextOffset)}. After that it is a short paid stay.</div>`;
+    if(meterUnknown && !meter.length) free+=`<div class="note">Pay-by-cell meter. Check the muni-meter for hours. This is not a week-long spot.</div>`;
     if(zone.length){
       const z=status(zone, now);
       zoneLine = z.inside ? `<div class="note">Loading/commercial zone section of this block: off limits now until ${fmtWM(now+z.endOffset)}.</div>`
@@ -271,7 +276,7 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;
 function fmtShort(m){
   m=((m%WEEK)+WEEK)%WEEK;
   const d=Math.floor(m/1440), t=m%1440, h=Math.floor(t/60), mi=t%60, ap=h<12?'am':'pm', hr=(h%12)||12;
-  return DNs[d]+' '+hr+':'+String(mi).padStart(2,'0')+ap;
+  return DNs[d]+' '+hr+(mi?':'+String(mi).padStart(2,'0'):'')+ap;
 }
 function fmtDurCompact(min){
   min=Math.max(0, Math.round(min));
@@ -306,33 +311,84 @@ function prohibIv(f){
   }
   return mergeIv(iv);
 }
-function meterState(f, t){
+function meterLimitMin(text){
+  const m=/(\d+)-(hour|min)/.exec(text||'');
+  if(!m) return null;
+  return m[2]==='hour' ? (+m[1])*60 : +m[1];
+}
+function meterInfo(f){
   const month=nyParts().month, iv=[];
-  let unknown=false;
+  let unknown=false, limit=null, has=f.cat==='meter';
   for(const r of f.r){
     if(r.t!=='meter') continue;
+    has=true;
     if(r.mo && !monthIn(month, r.mo)) continue;
+    const lim=meterLimitMin(r.x);
+    if(lim) limit=lim;
     if(!r.iv || !r.iv.length) unknown=true;
     else if(!r.a) for(const seg of r.iv) iv.push(seg);
   }
-  const miv=mergeIv(iv);
-  if(!miv.length) return {unknown, inside:false, text: unknown?'Meter hours are not in the DOT data. Check the muni-meter. Paid during posted hours; that is not a reason to move.':''};
-  const st=status(miv, t);
-  if(st.inside) return {unknown, inside:true, text:'Metered now until '+fmtShort(t+st.endOffset)+' (paid). You do not have to move for the meter.'};
-  return {unknown, inside:false, text:'Meter starts '+fmtShort(t+st.nextOffset)+' (paid while it runs).'};
+  return {has, unknown, iv:mergeIv(iv), limitMin: limit||120};
+}
+// How long a bike can legally sit, starting at minute t.
+// Metered sides are free only until meter hours begin. During meter hours
+// the stay is the posted time limit (usually 1–2 hours), not the rest of the week.
+function stayFrom(f, t){
+  const iv=prohibIv(f);
+  if(iv===null) return {kind:'unknown', metered:false, freeStay:0};
+  const insideProhib=iv.length && status(iv, t).inside;
+  if(insideProhib){
+    const st=status(iv, t);
+    return {kind:'blocked', metered:f.cat==='meter', freeStay:0, endOffset:st.endOffset};
+  }
+  const prohibWait=iv.length ? status(iv, t).nextOffset : MAX_STAY;
+  const meter=meterInfo(f);
+  if(!meter.has){
+    const stay=Math.min(prohibWait, MAX_STAY);
+    return {kind:'free', metered:false, freeStay:stay, goodAt:(t+stay)%WEEK, capped:prohibWait>=MAX_STAY, limitMin:null};
+  }
+  if(meter.unknown || !meter.iv.length){
+    const stay=iv.length ? Math.min(prohibWait, MAX_STAY) : 0;
+    return {kind:'unknown-meter', metered:true, unknown:true, freeStay:0, prohibStay:stay, goodAt:iv.length?(t+stay)%WEEK:null, capped:false, limitMin:null};
+  }
+  const st=status(meter.iv, t);
+  if(st.inside){
+    const paid=Math.min(meter.limitMin, st.endOffset, prohibWait);
+    return {kind:'paid', metered:true, freeStay:0, paidStay:paid, goodAt:(t+paid)%WEEK, limitMin:meter.limitMin, capped:false};
+  }
+  const untilMeter=st.nextOffset;
+  const stay=Math.min(untilMeter, prohibWait, MAX_STAY);
+  const meterFirst=untilMeter<prohibWait && untilMeter<MAX_STAY;
+  return {kind:meterFirst?'then-meter':'free', metered:true, freeStay:stay, goodAt:(t+stay)%WEEK, limitMin:meter.limitMin, capped:false};
+}
+function meterState(f, t){
+  const meter=meterInfo(f);
+  if(!meter.has) return {text:''};
+  if(meter.unknown || !meter.iv.length) return {text:'Metered. Hours are not in the DOT data — check the muni-meter. Do not assume a week-long stay.'};
+  const st=status(meter.iv, t);
+  const hrs=meter.limitMin%60 ? (meter.limitMin+' min') : ((meter.limitMin/60)+'-hour');
+  if(st.inside) return {text:'Metered now. Paid stay is the '+hrs+' limit, not the rest of the week.'};
+  return {text:'Free until the meter starts '+fmtShort(t+st.nextOffset)+'. After that it is a short paid stay.'};
 }
 function describeSpot(f, now){
   if(!f) return {kind:'none', headline:'', depart:now};
-  if(f.cat==='red') return {kind:'now', headline:'Move now', detail:'No parking or standing anytime.', depart:now};
-  const iv=prohibIv(f);
-  if(iv===null) return {kind:'unknown', headline:'Unknown, check signs', detail:'This side did not parse confidently.', depart:now};
-  if(!iv.length) return {kind:'limit', headline:'Move by '+fmtShort(now+MAX_STAY)+', '+fmtDurCompact(MAX_STAY)+' from now', detail:'No timed no-parking rule on this side. NYC still limits a spot to 7 days.', depart:now+MAX_STAY, wait:MAX_STAY};
-  const st=status(iv, now);
-  if(st.inside) return {kind:'now', headline:'Move now', detail:'Restriction ends '+fmtShort(now+st.endOffset)+'.', depart:now};
-  const wait=Math.min(st.nextOffset, MAX_STAY), capped=st.nextOffset>MAX_STAY;
+  if(f.cat==='red') return {kind:'now', headline:'Move now', detail:'No parking or standing anytime.', depart:now, freeStay:0};
+  const w=stayFrom(f, now);
+  if(w.kind==='unknown') return {kind:'unknown', headline:'Unknown, check signs', detail:'This side did not parse confidently.', depart:now, freeStay:0};
+  if(w.kind==='blocked') return {kind:'now', headline:'Move now', detail:'Restriction ends '+fmtShort(now+w.endOffset)+'.', depart:now, freeStay:0};
+  if(w.kind==='unknown-meter' && !w.prohibStay) return {kind:'unknown', headline:'Metered, check the muni-meter', detail:'Hours are not in the DOT data, so this is not a week-long spot.', depart:now, freeStay:0};
+  if(w.kind==='paid'){
+    const hrs=w.limitMin%60 ? (w.limitMin+' min') : ((w.limitMin/60)+'-hour');
+    return {kind:'move', headline:'Move by '+fmtShort(now+w.paidStay)+', '+fmtDurCompact(w.paidStay)+' from now', detail:hrs+' meter limit (paid), not an all-week stay.', depart:now+w.paidStay, freeStay:0};
+  }
+  if(w.kind==='unknown-meter'){
+    return {kind:'move', headline:'Move by '+fmtShort(now+w.prohibStay)+', '+fmtDurCompact(w.prohibStay)+' from now', detail:'Also metered, and the hours are not in the DOT data. Check the muni-meter — it may start sooner.', depart:now+w.prohibStay, freeStay:0};
+  }
+  const wait=w.freeStay;
   let detail=fmtDurCompact(wait)+' from now';
-  if(capped) detail+=' (7-day limit; the next sign is later)';
-  return {kind:capped?'limit':'move', headline:'Move by '+fmtShort(now+wait)+', '+detail, detail, depart:now+wait, wait};
+  if(w.capped) detail+=' (7-day limit; the next sign is later)';
+  const thenMeter=w.kind==='then-meter' ? ', then meter' : '';
+  return {kind:w.capped?'limit':'move', headline:'Move by '+fmtShort(now+wait)+thenMeter+', '+detail, detail, depart:now+wait, freeStay:wait, wait};
 }
 function xyMeters(lat, lon, lat0, lon0){
   return [(lon-lon0)*111320*Math.cos(lat0*Math.PI/180), (lat-lat0)*111320];
@@ -378,20 +434,14 @@ function rankSuggestions(now){
     const walk=walkMin(meters);
     if(walk>MAX_WALK) continue;
     const arrival=depart+walk;
-    let raw;
-    if(iv.length){
-      const st=status(iv, arrival);
-      if(st.inside) continue;
-      raw=st.nextOffset;
-    } else raw=MAX_STAY;
-    const capped=raw>=MAX_STAY;
-    const stay=Math.min(raw, MAX_STAY);
-    if(stay<MIN_STAY) continue;
-    const goodAt=(arrival+stay)%WEEK;
-    const score=(f.once?100000:0)+stay-walk*180;
-    rows.push({f, walk, stay, capped, goodAt, score});
+    const w=stayFrom(f, arrival);
+    if(!w || w.kind==='blocked' || w.kind==='unknown') continue;
+    // Free stay is what you get without paying. A meter running now is only
+    // a short paid stay, so it does not count as free time.
+    if(w.freeStay<MIN_STAY) continue;
+    rows.push({f, walk, stay:w.freeStay, capped:!!w.capped, goodAt:w.goodAt, kind:w.kind, metered:!!w.metered, limitMin:w.limitMin||null, once:!!f.once});
   }
-  rows.sort((a,b)=>b.score-a.score || a.walk-b.walk);
+  rows.sort((a,b)=>(b.once-a.once) || (b.stay-a.stay) || ((a.metered?1:0)-(b.metered?1:0)) || (a.walk-b.walk));
   return {rows:rows.slice(0,8), origin, depart};
 }
 function longestGap(iv){
@@ -445,12 +495,15 @@ function pills(f){
 }
 function sugRow(s, i){
   const f=s.f, on=focusId===f.id?' on':'';
-  const until='Good until '+fmtShort(s.goodAt);
-  const extra=s.capped ? '7-day limit' : fmtDurCompact(s.stay);
+  let mid;
+  if(s.kind==='then-meter') mid=s.walk+' min walk · Good until '+fmtShort(s.goodAt)+', then meter';
+  else if(s.kind==='unknown-meter') mid=s.walk+' min walk · Metered, check the muni-meter';
+  else if(s.kind==='paid') mid=s.walk+' min walk · Paid, '+(s.limitMin/60)+'-hour meter limit';
+  else mid=s.walk+' min walk · Good until '+fmtShort(s.goodAt)+' · '+(s.capped?'7-day limit':fmtDurCompact(s.stay));
   const park=focusId===f.id ? '<button type="button" class="park" data-act="park" data-id="'+esc(f.id)+'">I parked here</button>' : '';
   return '<button type="button" class="row'+on+'" data-act="focus" data-id="'+esc(f.id)+'">'+
     '<div class="rt"><b>'+i+'. '+esc(sideLabel(f))+'</b> '+pills(f)+'</div>'+
-    '<div class="rd">'+s.walk+' min walk · '+esc(until)+' · '+esc(extra)+'</div>'+
+    '<div class="rd">'+esc(mid)+'</div>'+
     '<div class="rs">Between '+esc(f.a)+' and '+esc(f.b)+'</div></button>'+park;
 }
 function planRow(s){
@@ -499,17 +552,18 @@ function renderSheet(){
     '<button type="button" data-act="rank" data-val="now" class="'+(rankAt==='now'?'on':'')+'">Right now</button></div></div>';
   const fromLabel=ranked.origin.label;
   html+='<h3 id="suggestions">Where to move it</h3>';
-  html+='<p class="sub">Within '+MAX_WALK+' min of '+esc(fromLabel)+', from '+(rankAt==='move'&&f?'when you have to move':'now')+'. Once-a-week cleaning ranks first.</p>';
+  html+='<p class="sub">Within '+MAX_WALK+' min of '+esc(fromLabel)+', from '+(rankAt==='move'&&f?'when you have to move':'now')+'. Free sides rank above meters unless the meter is free for longer.</p>';
   if(!ranked.rows.length) html+='<p class="empty">No legal side within a '+MAX_WALK+' minute walk at that time.</p>';
   ranked.rows.forEach((s,i)=>{ html+=sugRow(s, i+1); });
   const plans=weeklyPlan();
   const stretches=plans.length?[]:cleaningStretches();
-  html+='<h3>Weekly plan</h3>';
+  html+='<h3 id="weekly">Weekly plan</h3>';
   if(plans.length){
     html+='<p class="sub">Park right after cleaning ends and stay about 7 days. These are within a '+PLAN_WALK+' minute walk of Washington Square.</p>';
     plans.forEach(s=>{ html+=planRow(s); });
   } else {
-    html+='<p class="sub">No side within a '+PLAN_WALK+' minute walk of Washington Square has street cleaning only once a week, so one move does not buy a free week here. Broom signs are usually Monday &amp; Thursday or Tuesday &amp; Friday. Longest free stretches after cleaning:</p>';
+    html+='<p class="sub">No once-a-week sides in this area; best is about 3 to 4 days (Mon/Thu cleaning).</p>';
+    html+='<p class="sub">Longest free stretches within a '+PLAN_WALK+' minute walk of Washington Square, if you park right after cleaning ends:</p>';
     if(!stretches.length) html+='<p class="empty">No cleaning-only side in that walk.</p>';
     stretches.forEach(s=>{ html+=planRow(s); });
   }
@@ -612,7 +666,7 @@ if(location.hash==='#bike' || bikeId){
   if(bikeId) drawHi();
 }
 if(location.hash==='#bike') setMode('bike', true);
-window.MOTO={setBike, clearBike, describeSpot, rankSuggestions, weeklyPlan, cleaningStretches, nyNow, BYID, renderAll, getBike(){return bikeId;}};
+window.MOTO={setBike, clearBike, describeSpot, stayFrom, rankSuggestions, weeklyPlan, cleaningStretches, nyNow, BYID, renderAll, getBike(){return bikeId;}};
 
 window.addEventListener('resize',()=>map.invalidateSize());
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){

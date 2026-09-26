@@ -2,12 +2,17 @@
 import asyncio
 import json
 import os
+import sys
 
 from playwright.async_api import async_playwright
 
 URL = os.environ.get("MOTO_URL", "http://127.0.0.1:8123/")
 OUT = os.environ.get("MOTO_SHOT", "/tmp/moto-my-bike.png")
+WEEKLY_OUT = os.environ.get("MOTO_WEEKLY_SHOT", "/tmp/moto-weekly-plan.png")
 BIKE = "5th-ave|w|w-8th-st|washington-sq-n"
+METER9 = "5th-ave|e|e-12th-st|e-11th-st"
+UNKNOWN = "bowery|w|bleecker-st|e-houston-st"
+WEEKLY_LINE = "No once-a-week sides in this area; best is about 3 to 4 days (Mon/Thu cleaning)."
 
 
 async def main():
@@ -38,8 +43,55 @@ async def main():
         text = await page.inner_text("#sheet")
         report["has_move_by"] = "Move by " in text and "from now" in text
         report["has_suggestions"] = "min walk" in text and "Good until" in text
-        report["has_weekly"] = "weekly plan" in text.lower() and "once a week" in text.lower()
+        report["has_weekly_line"] = WEEKLY_LINE in text
         report["has_asp"] = "ASP calendar" in text and "@NYCASP" in text
+        report["rules"] = await page.evaluate(
+            """({meterId, unknownId}) => {
+              const SAT = 6*1440 + 16*60 + 32;
+              const SUN8 = 20*60;
+              const meter = MOTO.BYID[meterId];
+              const unknown = MOTO.BYID[unknownId];
+              const bike = MOTO.BYID['5th-ave|w|w-8th-st|washington-sq-n'];
+              const satMeter = MOTO.stayFrom(meter, SAT);
+              const sunMeter = MOTO.stayFrom(meter, SUN8);
+              const sunBike = MOTO.stayFrom(bike, SUN8);
+              const unknownStay = MOTO.stayFrom(unknown, SAT);
+              const unknownSpot = MOTO.describeSpot(unknown, SAT);
+              const prevRank = rankAt;
+              const prevBike = MOTO.getBike();
+              rankAt = 'now';
+              const sunRows = MOTO.rankSuggestions(SUN8).rows.map(s => ({
+                id: s.f.id, cat: s.f.cat, stay: s.stay, metered: s.metered, kind: s.kind, capped: s.capped
+              }));
+              rankAt = 'move';
+              const moveRows = MOTO.rankSuggestions(SAT).rows.map(s => ({
+                id: s.f.id, cat: s.f.cat, stay: s.stay, metered: s.metered, kind: s.kind, capped: s.capped
+              }));
+              rankAt = prevRank;
+              const unknownCount = DATA.filter(f => f.r.some(r => r.t==='meter' && (!r.iv || !r.iv.length))).length;
+              function meterBeatsShorterFree(rows){
+                for (let i=0;i<rows.length;i++){
+                  if (!rows[i].metered) continue;
+                  for (let j=i+1;j<rows.length;j++){
+                    if (!rows[j].metered && rows[i].stay <= rows[j].stay) return false;
+                  }
+                }
+                return true;
+              }
+              return {
+                satMeter, sunMeter, sunBike, unknownStay,
+                unknownHeadline: unknownSpot.headline,
+                unknownDetail: unknownSpot.detail,
+                unknownFree: unknownSpot.freeStay,
+                sunRows, moveRows,
+                sunOrder: meterBeatsShorterFree(sunRows),
+                moveOrder: meterBeatsShorterFree(moveRows),
+                unknownCount,
+                sunGood: (function(){ const w=sunMeter; return w.goodAt; })()
+              };
+            }""",
+            {"meterId": METER9, "unknownId": UNKNOWN},
+        )
         report["saved"] = await page.evaluate("MOTO.getBike()")
         # Tap the first suggestion and park there.
         await page.click("#sheet .row")
@@ -88,7 +140,12 @@ async def main():
         pop = await page.evaluate("(document.querySelector('.leaflet-popup-content')||{}).innerText||''")
         report["popup_ok"] = all(s in pop for s in ["Free right now", "You must move by", "Posted rules", "New York time"])
         # Back to the bike tab for the screenshot, with the original spot and the list in view.
-        await page.evaluate("""(id) => { MOTO.setBike(id, false); }""", BIKE)
+        # Saturday 4:32pm is inside typical meter hours, so a legal week-long reading would be wrong.
+        await page.evaluate("""(id) => {
+          window.__NY_NOW = 6*1440 + 16*60 + 32;
+          rankAt = 'move';
+          MOTO.setBike(id, false);
+        }""", BIKE)
         await page.click("#tabBike")
         await page.wait_for_timeout(500)
         sug = await page.query_selector("#suggestions")
@@ -113,7 +170,27 @@ async def main():
           }).length;
         }""")
         report["rows_fully_visible"] = visible
+        sheet_text = await page.inner_text("#sheet")
+        report["shot_has_weekly_line"] = WEEKLY_LINE in sheet_text
+        report["shot_no_7day"] = "7-day limit" not in sheet_text
+        report["shot_top"] = await page.evaluate("""() => {
+          const sug = document.getElementById('suggestions');
+          const weekly = document.getElementById('weekly');
+          const list = [];
+          let el = sug.nextElementSibling;
+          while (el && el !== weekly) {
+            if (el.classList && el.classList.contains('row')) list.push(el.innerText.replace(/\\s+/g, ' ').trim());
+            el = el.nextElementSibling;
+          }
+          return list.slice(0, 4);
+        }""")
         await page.screenshot(path=OUT, full_page=False)
+        weekly = await page.query_selector("#weekly")
+        await weekly.scroll_into_view_if_needed()
+        await page.wait_for_timeout(200)
+        await page.screenshot(path=WEEKLY_OUT, full_page=False)
+        window_now = await page.evaluate("window.__NY_NOW = undefined; true")
+        report["clock_restored"] = window_now
         await page.click("#sheet [data-act=clear]")
         await page.wait_for_timeout(200)
         report["cleared"] = await page.evaluate("MOTO.getBike()===null && !localStorage.getItem('motoParking.bike.v1')")
@@ -122,8 +199,52 @@ async def main():
         report["snapped"] = await page.evaluate("MOTO.getBike()")
         report["console"] = logs
         report["shot"] = OUT
+        report["weekly_shot"] = WEEKLY_OUT
         print(json.dumps(report, indent=2))
         await browser.close()
+        errors = []
+        rules = report["rules"]
+        if rules["satMeter"]["kind"] != "paid" or rules["satMeter"]["freeStay"] != 0:
+            errors.append("saturday afternoon meter should be a short paid stay, not a free week")
+        if rules["satMeter"].get("paidStay") != 120:
+            errors.append("2-hour meter paid stay should be 120 minutes, got %s" % rules["satMeter"])
+        if rules["sunMeter"]["kind"] != "then-meter" or rules["sunMeter"]["freeStay"] != 780:
+            errors.append("sunday evening 9am meter should be free until Monday 9am (780 min), got %s" % rules["sunMeter"])
+        if rules["sunBike"]["freeStay"] >= rules["sunMeter"]["freeStay"]:
+            errors.append("the 9am meter should outlast the Monday 8:30am cleaning side on Sunday evening")
+        if not rules["sunOrder"] or not rules["moveOrder"]:
+            errors.append("a meter outranked a free side with an equal or longer free stay")
+        if any(r["metered"] and r["capped"] for r in rules["sunRows"] + rules["moveRows"]):
+            errors.append("a metered suggestion was labeled with the 7-day cap")
+        if any(r["metered"] for r in rules["moveRows"]):
+            errors.append("at Monday move time, meters (which start within the hour) should not outrank free sides")
+        if rules["moveRows"] and rules["moveRows"][0]["metered"]:
+            errors.append("top suggestion at move time is metered")
+        if rules["unknownCount"] != 12:
+            errors.append("expected 12 pay-by-cell sides, got %s" % rules["unknownCount"])
+        if rules["unknownFree"] != 0 or "muni-meter" not in (rules["unknownDetail"] or "").lower():
+            errors.append("unknown meter hours should not count as a free week: %s" % rules)
+        if "7-day" in (rules["unknownHeadline"] or "") or "7-day" in (rules["unknownDetail"] or ""):
+            errors.append("unknown meter copy still mentions a 7-day stay")
+        if not report["has_weekly_line"] or not report["shot_has_weekly_line"]:
+            errors.append("weekly plan is missing the once-a-week sentence")
+        if not report["shot_no_7day"]:
+            errors.append("visible sheet still says 7-day limit")
+        if not report["shot_top"] or any("7-day" in row or "Metered" in row for row in report["shot_top"]):
+            errors.append("top suggestions should be free sides, got %s" % report["shot_top"])
+        if any("then meter" not in row and "Metered" in row for row in report["shot_top"]):
+            errors.append(report["shot_top"])
+        if report["forced_headline"] != "Move by Mon 8:30am, 1d 16h from now":
+            errors.append("headline changed: %s" % report["forced_headline"])
+        if report["unknown"] != "Unknown, check signs":
+            errors.append(report["unknown"])
+        if not report["popup_ok"] or not report["park_changed"] or not report["cleared"]:
+            errors.append("interaction check failed")
+        if report["console"]:
+            errors.append(report["console"])
+        if errors:
+            print("FAILED", json.dumps(errors, indent=2), file=sys.stderr)
+            sys.exit(1)
 
 
 if __name__ == "__main__":
