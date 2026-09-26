@@ -1,25 +1,9 @@
 // Moto Parking service worker. Paths are relative to this file, so it works from a subpath.
-const VERSION = '6adcc59635';
+const VERSION = '__VERSION__';
 const STATIC_CACHE = 'moto-parking-static-' + VERSION;
 const TILE_CACHE = 'moto-parking-tiles-v1';
 const TILE_MAX = 400; // max cached map tiles
-const PRECACHE = [
-  "./",
-  "index.html",
-  "manifest.webmanifest",
-  "apple-touch-icon.png",
-  "icon-192.png",
-  "icon-512.png",
-  "icon-maskable-512.png",
-  "favicon-32.png",
-  "vendor/leaflet/leaflet.js",
-  "vendor/leaflet/leaflet.css",
-  "vendor/leaflet/images/layers.png",
-  "vendor/leaflet/images/layers-2x.png",
-  "vendor/leaflet/images/marker-icon.png",
-  "vendor/leaflet/images/marker-icon-2x.png",
-  "vendor/leaflet/images/marker-shadow.png"
-];
+const PRECACHE = __PRECACHE__;
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(STATIC_CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
