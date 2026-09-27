@@ -18,14 +18,22 @@ DATA = os.path.join(ROOT, "data")
 to_sp = Transformer.from_crs("EPSG:4326","EPSG:2263",always_xy=True)
 to_ll = Transformer.from_crs("EPSG:2263","EPSG:4326",always_xy=True)
 
-# ---------- area polygon (Houston-14th, 6th Ave-Ave A), with a small buffer
-AREA_LL = [(-74.0045,40.7285),(-73.9972,40.7390),(-73.9798,40.7318),(-73.9862,40.7212)]
-AREA = Polygon([to_sp.transform(*c) for c in AREA_LL])
+# ---------- study areas. Corners are neighborhood extents, not a place.
+# Village: Houston-14th, 6th Ave-Ave A, with a small buffer.
+# Lower: Battery Park City, southern Tribeca, west side of the Financial
+# District (Chambers St south to Battery Place, Hudson to about Broadway).
+VILLAGE_LL = [(-74.0045,40.7285),(-73.9972,40.7390),(-73.9798,40.7318),(-73.9862,40.7212)]
+LOWER_LL = [(-74.0200,40.7050),(-74.0050,40.7050),(-74.0050,40.7210),(-74.0200,40.7210)]
+AREAS = [
+    {"id":"village", "poly":Polygon([to_sp.transform(*c) for c in VILLAGE_LL])},
+    {"id":"lower", "poly":Polygon([to_sp.transform(*c) for c in LOWER_LL])},
+]
 
 # ---------- street name normalization
 TOK = {"EAST":"E","WEST":"W","NORTH":"N","SOUTH":"S","STREET":"ST","AVENUE":"AVE","PLACE":"PL","SQUARE":"SQ",
        "LANE":"LN","ALLEY":"ALY","FIRST":"1","SECOND":"2","THIRD":"3","FOURTH":"4","FIFTH":"5","SIXTH":"6","SEVENTH":"7"}
-ALIAS = {"6AVE":"AVEOFTHEAMERICAS","AVEOFAMERICAS":"AVEOFTHEAMERICAS","SAINTMARKSPL":"STMARKSPL","LAGUARDIAPL":"LAGUARDIAPL","MACDOUGALST":"MACDOUGALST","NDPERLMANPL":"NATHANDPERLMANPL"}
+ALIAS = {"6AVE":"AVEOFTHEAMERICAS","AVEOFAMERICAS":"AVEOFTHEAMERICAS","SAINTMARKSPL":"STMARKSPL","LAGUARDIAPL":"LAGUARDIAPL","MACDOUGALST":"MACDOUGALST","NDPERLMANPL":"NATHANDPERLMANPL",
+         "RIVERTERRACE":"RIVERTER","THEATREALY":"THEATERALY"}
 def nkey(s):
     s = re.sub(r"\s+"," ",(s or "").upper().strip())
     k = "".join(TOK.get(t,t) for t in s.split(" "))
@@ -38,9 +46,17 @@ def pretty(s):
     for w,o in [("First","1st"),("Second","2nd"),("Third","3rd"),("Fourth","4th"),("Fifth","5th"),("Sixth","6th"),("Seventh","7th")]:
         s = re.sub(r"\b"+w+r" Ave\b", o+" Ave", s)
     s = s.replace("East ","E ").replace("West ","W ").replace("St Marks","St Marks")
+    # "West St" is West Street. Numbered "W 4th St" does not match.
+    s = re.sub(r"\bW St\b", "West St", s)
+    def _ord(n):
+        n=int(n)
+        suf="th" if n%100 in (11,12,13) else {1:"st",2:"nd",3:"rd"}.get(n%10,"th")
+        return str(n)+suf
+    s = re.sub(r"\b(\d+) Pl\b", lambda m: _ord(m.group(1))+" Pl", s)
     for a,b in [("Ave Of The Americas","6th Ave"),("Ave Of Americas","6th Ave"),("Mac Dougal","MacDougal"),("Macdougal","MacDougal"),
                 ("La Guardia","LaGuardia"),("Laguardia","LaGuardia"),("Saint Marks","St Marks"),("Sq East","Sq E"),("Sq West","Sq W"),
-                ("Sq North","Sq N"),("Sq South","Sq S"),("N D Perlman","Nathan D Perlman"),("Minetta Lane","Minetta Ln")]:
+                ("Sq North","Sq N"),("Sq South","Sq S"),("N D Perlman","Nathan D Perlman"),("Minetta Lane","Minetta Ln"),
+                ("Hanover Sq","Hanover Square")]:
         s = s.replace(a,b)
     return s
 
@@ -133,14 +149,18 @@ def block_geom(key, pts):
 
 SOUTH={"PRINCEST","STANTONST","SPRINGST","RIVINGTONST","BROOMEST","GRANDST","KENMAREST","DELANCEYST","CLEVELANDPL"}
 RANK={"red":0,"green":1,"yellow":2,"meter":3}
-features=[]; skipped=collections.Counter()
+features=[]; skipped=collections.Counter(); by_area=collections.Counter()
 for key,pts in groups.items():
     xs=[p[0] for p in pts]; ys=[p[1] for p in pts]
     cen=Point(sum(xs)/len(xs),sum(ys)/len(ys))
-    if not AREA.contains(cen): skipped["outside"]+=1; continue
-    def num(k):
-        m=re.fullmatch(r"[EW](\d+)ST",k); return int(m.group(1)) if m else None
-    if any((num(k) or 0)>14 for k in key[:3]) or any(k in SOUTH for k in key[:3]): skipped["outside"]+=1; continue
+    area=next((a for a in AREAS if a["poly"].contains(cen)), None)
+    if area is None: skipped["outside"]+=1; continue
+    # The Village name screen drops SoHo and streets above 14th that fall in
+    # that polygon's bounding box. It does not apply to Lower Manhattan.
+    if area["id"]=="village":
+        def num(k):
+            m=re.fullmatch(r"[EW](\d+)ST",k); return int(m.group(1)) if m else None
+        if any((num(k) or 0)>14 for k in key[:3]) or any(k in SOUTH for k in key[:3]): skipped["outside"]+=1; continue
     rules=[]; seen=set(); meterhint=False; raw_descs=set()
     for x,y,r in pts:
         cs=classify_sign(r["sign_description"])
@@ -185,6 +205,7 @@ for key,pts in groups.items():
     mid=[round(sum(p[0] for p in coords)/len(coords),6), round(sum(p[1] for p in coords)/len(coords),6)]
     features.append({"id":fid,"on":on,"side":key[3],"a":fa,"b":fb,"cat":cat,"ok":ok,"once":once,"plan":plan,
                      "m":mid,"c":coords,"r":out_rules,"n":len(pts)})
+    by_area[area["id"]]+=1
 
 ids=[f["id"] for f in features]
 if len(ids)!=len(set(ids)):
@@ -208,6 +229,7 @@ plan_near=[f for f in plan if near(f,12)]
 clean=sum(1 for f in features if f["ok"])
 meter_unknown=sum(1 for f in features if any(r["t"]=="meter" and not r["iv"] for r in f["r"]))
 print("features",len(features))
+print("by_area", dict(by_area))
 print("categories", dict(collections.Counter(f["cat"] for f in features)))
 print("parse_ok", clean, "of", len(features))
 print("meter_hours_unknown", meter_unknown)

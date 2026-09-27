@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Moto Parking</title>
-<meta name="description" content="Motorcycle street parking rules for Greenwich Village and nearby NYC blocks, from NYC DOT sign records.">
+<meta name="description" content="Motorcycle street parking rules for Greenwich Village and Lower Manhattan, from NYC DOT sign records.">
 <meta name="theme-color" content="#161b22">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27,7 +27,7 @@ body{position:fixed;inset:0;display:flex;flex-direction:column}
 .leaflet-top{top:var(--sat)}
 .leaflet-left{left:var(--sal)}
 .leaflet-right{right:var(--sar)}
-#panel{position:absolute;top:calc(10px + var(--sat));right:calc(10px + var(--sar));z-index:1000;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:8px 12px;max-width:260px;max-height:calc(100% - 90px - var(--sat));overflow:auto;font-size:14px;-webkit-overflow-scrolling:touch}
+#panel{position:absolute;top:calc(10px + var(--sat));right:calc(10px + var(--sar));z-index:1000;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.3);padding:8px 12px;box-sizing:border-box;min-width:min(270px, calc(100% - 70px - var(--sal) - var(--sar)));max-width:min(280px, calc(100% - 70px - var(--sal) - var(--sar)));max-height:calc(100% - 90px - var(--sat));overflow:auto;font-size:14px;-webkit-overflow-scrolling:touch}
 #panel .hd{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;background:none;border:none;padding:4px 0;font:600 15px/1.2 inherit;font-family:inherit;color:#111;cursor:pointer;text-align:left}
 #panel .hd .chev{font-size:13px;transition:transform .15s;display:inline-block}
 #panel.collapsed .hd .chev{transform:rotate(-90deg)}
@@ -37,6 +37,10 @@ body{position:fixed;inset:0;display:flex;flex-direction:column}
 #panel .small{font-size:11px;color:#555;margin-top:4px}
 #panel.collapsed .body{display:none}
 #panel.collapsed{padding:6px 12px}
+#areas{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:6px 0 2px}
+#areas button{min-height:36px;border:1px solid #cfd5de;background:#f3f5f8;border-radius:8px;font:600 11.5px/1.15 inherit;font-family:inherit;color:#1c2430;padding:6px 4px;cursor:pointer}
+@media (max-width:360px){#areas button{font-size:11px}}
+#areas button.on{background:#243044;color:#fff;border-color:#243044}
 .btn{position:absolute;z-index:1000;left:calc(10px + var(--sal));background:#fff;color:#111;border:none;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:15px;padding:12px 14px;cursor:pointer;font-family:inherit}
 #locate{bottom:22px}
 #recenter{bottom:76px}
@@ -99,6 +103,10 @@ body.mode-bike #panel{display:none}
 <div id="wrap">
 <div id="map"></div>
 <div id="panel"><button class="hd" id="tg" aria-expanded="true" aria-controls="filters"><span>Moto street parking</span><span class="chev">&#9660;</span></button>
+<div id="areas" role="group" aria-label="Map area">
+<button type="button" data-area="village" class="on" aria-pressed="true">Village</button>
+<button type="button" data-area="lower" aria-pressed="false">Lower Manhattan</button>
+</div>
 <div class="body" id="filters"></div></div>
 <button class="btn" id="recenter" title="Recenter on Washington Square Park">&#127919; Recenter</button>
 <button class="btn" id="locate" title="Locate me">&#128205; Locate me</button>
@@ -108,11 +116,16 @@ body.mode-bike #panel{display:none}
 <button type="button" id="tabMap" class="on" aria-selected="true">Map</button>
 <button type="button" id="tabBike" aria-selected="false">My bike</button>
 </nav>
-<div id="footer">Built from NYC DOT sign records; the sign on the pole always wins. Motorcycles follow the same signs as cars. Alternate side is suspended on some holidays — see the My bike tab for the official calendar. <span class="pulled">Data pulled __DATE__.</span></div>
+<div id="footer">Built from NYC DOT sign records for Greenwich Village and Lower Manhattan; the sign on the pole always wins. Motorcycles follow the same signs as cars. Alternate side is suspended on some holidays — see the My bike tab for the official calendar. <span class="pulled">Data pulled __DATE__.</span></div>
 <script>
 const DATA = __DATA__;
 const CENTER = [40.7308, -73.9973];
 const START_ZOOM = 16, RECENTER_ZOOM = 17;
+// View centers for the two neighborhood boxes.
+const AREAS = {
+  village:{ll:[40.7308,-73.9973], z:16},
+  lower:{ll:[40.7130,-74.0125], z:15}
+};
 const CATS = {
   green:{label:"Free anytime except street cleaning", color:"#2e9e44", on:true},
   yellow:{label:"Free nights/weekends (timed rules)", color:"#f2b705", on:true},
@@ -238,13 +251,34 @@ const fl=document.getElementById('filters');
   if(c.on) layers[k].addTo(map);
   fl.appendChild(lab);
 });
-fl.insertAdjacentHTML('beforeend','<div class="small">Tap a colored block side for rules and when you must move. The My bike tab saves a spot and counts down to the next restriction. Mixed blocks use the most restrictive timed rule. Data: NYC Open Data nfid-uabd + LION centerline, pulled __DATE__.</div>');
+fl.insertAdjacentHTML('beforeend','<div class="small">Tap a colored block side for rules and when you must move. Village and Lower Manhattan jump between the two areas. The My bike tab saves a spot and counts down to the next restriction. Mixed blocks use the most restrictive timed rule. Data: NYC Open Data nfid-uabd + LION centerline, pulled __DATE__.</div>');
 const panel=document.getElementById('panel'), tg=document.getElementById('tg');
 function setCollapsed(c){ panel.classList.toggle('collapsed',c); tg.setAttribute('aria-expanded',String(!c)); }
 tg.onclick=()=>setCollapsed(!panel.classList.contains('collapsed'));
 setCollapsed(window.matchMedia('(max-width:600px)').matches);
 
-document.getElementById('recenter').onclick=()=>map.setView(CENTER,RECENTER_ZOOM);
+function areaIdFor(ll){
+  if(ll && ll[0]>=40.705 && ll[0]<=40.7215 && ll[1]>=-74.0205 && ll[1]<=-74.0048) return 'lower';
+  return 'village';
+}
+function markArea(id){
+  document.querySelectorAll('#areas [data-area]').forEach(b=>{
+    const on=b.dataset.area===id;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on?'true':'false');
+  });
+}
+function jumpArea(id, zoom){
+  const a=AREAS[id];
+  if(!a) return;
+  markArea(id);
+  map.setView(a.ll, zoom||a.z);
+}
+document.getElementById('areas').addEventListener('click', e=>{
+  const b=e.target.closest('[data-area]');
+  if(b) jumpArea(b.dataset.area);
+});
+document.getElementById('recenter').onclick=()=>jumpArea('village', RECENTER_ZOOM);
 let me=null, meC=null;
 function showMe(ll, accuracy){
   userLL=ll;
@@ -454,33 +488,39 @@ function longestGap(iv){
   }
   return best;
 }
+function planAnchor(){
+  if(BYID[bikeId]) return {ll:midpoint(BYID[bikeId]), label:'your bike'};
+  return {ll:CENTER, label:'Washington Square'};
+}
 function weeklyPlan(){
+  const anchor=planAnchor();
   const strict=[];
   for(const f of DATA){
     if(!f.plan || f.ok===0 || f.id===bikeId) continue;
-    const walk=walkMin(distToFeature(CENTER[0], CENTER[1], f));
+    const walk=walkMin(distToFeature(anchor.ll[0], anchor.ll[1], f));
     if(walk>PLAN_WALK) continue;
     const iv=prohibIv(f);
     if(!iv || !iv.length) continue;
     const gap=longestGap(iv);
     if(!gap || gap.gap<6*1440) continue;
-    strict.push(Object.assign({f, walk}, gap));
+    strict.push(Object.assign({f, walk, fromLabel:anchor.label}, gap));
   }
   strict.sort((a,b)=>a.walk-b.walk || b.gap-a.gap);
   return strict.slice(0,5);
 }
 function cleaningStretches(){
+  const anchor=planAnchor();
   const rows=[];
   for(const f of DATA){
     if(f.cat==='red' || f.ok===0 || f.cat==='meter' || f.id===bikeId) continue;
     if(!f.r.some(r=>r.t==='clean' && !r.a && r.iv && r.iv.length)) continue;
     const iv=prohibIv(f);
     if(!iv || !iv.length) continue;
-    const walk=walkMin(distToFeature(CENTER[0], CENTER[1], f));
+    const walk=walkMin(distToFeature(anchor.ll[0], anchor.ll[1], f));
     if(walk>PLAN_WALK) continue;
     const gap=longestGap(iv);
     if(!gap) continue;
-    rows.push(Object.assign({f, walk}, gap));
+    rows.push(Object.assign({f, walk, fromLabel:anchor.label}, gap));
   }
   rows.sort((a,b)=>b.gap-a.gap || a.walk-b.walk);
   return rows.slice(0,4);
@@ -511,7 +551,7 @@ function planRow(s){
   const park=focusId===f.id ? '<button type="button" class="park" data-act="park" data-id="'+esc(f.id)+'">I parked here</button>' : '';
   return '<button type="button" class="row'+on+'" data-act="focus" data-id="'+esc(f.id)+'">'+
     '<div class="rt"><b>'+esc(sideLabel(f))+'</b> '+pills(f)+'</div>'+
-    '<div class="rd">Park after '+esc(fmtShort(s.parkAt))+' · '+s.walk+' min from Washington Square</div>'+
+    '<div class="rd">Park after '+esc(fmtShort(s.parkAt))+' · '+s.walk+' min from '+esc(s.fromLabel||'your bike')+'</div>'+
     '<div class="rs">Between '+esc(f.a)+' and '+esc(f.b)+' · good until '+esc(fmtShort(s.goodAt))+' · '+esc(s.capped?'7-day limit':fmtDurCompact(s.stay))+'</div></button>'+park;
 }
 function renderSheet(){
@@ -557,13 +597,14 @@ function renderSheet(){
   ranked.rows.forEach((s,i)=>{ html+=sugRow(s, i+1); });
   const plans=weeklyPlan();
   const stretches=plans.length?[]:cleaningStretches();
+  const anchorLabel=planAnchor().label;
   html+='<h3 id="weekly">Weekly plan</h3>';
   if(plans.length){
-    html+='<p class="sub">Park right after cleaning ends and stay about 7 days. These are within a '+PLAN_WALK+' minute walk of Washington Square.</p>';
+    html+='<p class="sub">Park right after cleaning ends and stay about 7 days. These are within a '+PLAN_WALK+' minute walk of '+esc(anchorLabel)+'.</p>';
     plans.forEach(s=>{ html+=planRow(s); });
   } else {
     html+='<p class="sub">No once-a-week sides in this area; best is about 3 to 4 days (Mon/Thu cleaning).</p>';
-    html+='<p class="sub">Longest free stretches within a '+PLAN_WALK+' minute walk of Washington Square, if you park right after cleaning ends:</p>';
+    html+='<p class="sub">Longest free stretches within a '+PLAN_WALK+' minute walk of '+esc(anchorLabel)+', if you park right after cleaning ends:</p>';
     if(!stretches.length) html+='<p class="empty">No cleaning-only side in that walk.</p>';
     stretches.forEach(s=>{ html+=planRow(s); });
   }
@@ -601,7 +642,11 @@ function drawHi(){
 function renderAll(pan){
   renderSheet();
   drawHi();
-  if(pan && BYID[bikeId]) map.setView(midpoint(BYID[bikeId]), Math.max(map.getZoom(), 17));
+  if(pan && BYID[bikeId]){
+    const ll=midpoint(BYID[bikeId]);
+    markArea(areaIdFor(ll));
+    map.setView(ll, Math.max(map.getZoom(), 17));
+  }
   setTimeout(()=>map.invalidateSize(), 60);
 }
 function setMode(next, pan){
@@ -655,7 +700,7 @@ document.getElementById('sheet').addEventListener('click', e=>{
     if(distFrom==='me' && !userLL){ ensureLocation(()=>renderAll(false)); return; }
     renderAll(false);
   } else if(act==='rank'){ rankAt=t.dataset.val; renderAll(false); }
-  else if(act==='focus'){ focusId=t.dataset.id; const g=BYID[focusId]; if(g) map.setView(midpoint(g), 18); renderAll(false); }
+  else if(act==='focus'){ focusId=t.dataset.id; const g=BYID[focusId]; if(g){ const ll=midpoint(g); markArea(areaIdFor(ll)); map.setView(ll, 18); } renderAll(false); }
   else if(act==='park') setBike(t.dataset.id, true);
 });
 document.getElementById('tabMap').onclick=()=>setMode('map', false);
@@ -666,7 +711,7 @@ if(location.hash==='#bike' || bikeId){
   if(bikeId) drawHi();
 }
 if(location.hash==='#bike') setMode('bike', true);
-window.MOTO={setBike, clearBike, describeSpot, stayFrom, rankSuggestions, weeklyPlan, cleaningStretches, nyNow, BYID, renderAll, getBike(){return bikeId;}};
+window.MOTO={setBike, clearBike, describeSpot, stayFrom, rankSuggestions, weeklyPlan, cleaningStretches, nyNow, BYID, renderAll, jumpArea, planAnchor, getBike(){return bikeId;}};
 
 window.addEventListener('resize',()=>map.invalidateSize());
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){
