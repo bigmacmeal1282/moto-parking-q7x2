@@ -1,5 +1,5 @@
 // Moto Parking service worker. Paths are relative to this file, so it works from a subpath.
-const VERSION = 'c84bbaaf0d';
+const VERSION = 'e7e45805fc';
 const STATIC_CACHE = 'moto-parking-static-' + VERSION;
 const TILE_CACHE = 'moto-parking-tiles-v1';
 const TILE_MAX = 400; // max cached map tiles
