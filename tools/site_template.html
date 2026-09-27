@@ -24,6 +24,7 @@ body{position:fixed;inset:0;display:flex;flex-direction:column}
 #map{position:absolute;inset:0;background:#ddd}
 #footer{flex:none;font-size:11px;line-height:14px;padding:6px calc(10px + var(--sar)) calc(6px + var(--sab)) calc(10px + var(--sal));background:#161b22;color:#e6e6e6}
 #footer .pulled{color:#9aa4b2;font-size:10.5px}
+#footer a{color:#9ecbff}
 .leaflet-top{top:var(--sat)}
 .leaflet-left{left:var(--sal)}
 .leaflet-right{right:var(--sar)}
@@ -116,7 +117,7 @@ body.mode-bike #panel{display:none}
 <button type="button" id="tabMap" class="on" aria-selected="true">Map</button>
 <button type="button" id="tabBike" aria-selected="false">My bike</button>
 </nav>
-<div id="footer">Built from NYC DOT sign records for Greenwich Village and Lower Manhattan; the sign on the pole always wins. Motorcycles follow the same signs as cars. Alternate side is suspended on some holidays — see the My bike tab for the official calendar. <span class="pulled">Data pulled __DATE__.</span></div>
+<div id="footer">Built from NYC DOT sign records for Greenwich Village and Lower Manhattan; the sign on the pole always wins. Motorcycles follow the same signs as cars. Alternate side is suspended on some holidays — see the My bike tab for the official calendar. <span class="pulled">Data pulled __DATE__.</span> <a href="checklist/">Checklist</a></div>
 <script>
 const DATA = __DATA__;
 const CENTER = [40.7308, -73.9973];
