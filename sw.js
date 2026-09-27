@@ -60,12 +60,21 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
   if (req.mode === 'navigate') {
     // Network first so data updates show up; fall back to the cached page offline.
+    // Checklist visits must not replace the cached parking map.
     event.respondWith((async () => {
+      const path = url.pathname;
+      const isChecklist = /\/checklist(?:\/(?:index\.html)?)?$/.test(path);
       try {
         const res = await fetch(req);
-        if (res.ok) { const c = await caches.open(STATIC_CACHE); c.put('index.html', res.clone()); }
+        if (res.ok) {
+          const c = await caches.open(STATIC_CACHE);
+          c.put(isChecklist ? 'checklist/index.html' : 'index.html', res.clone());
+        }
         return res;
       } catch (e) {
+        if (isChecklist) {
+          return (await caches.match('checklist/index.html')) || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+        }
         return (await caches.match('index.html', { ignoreSearch: true })) || (await caches.match('./'));
       }
     })());

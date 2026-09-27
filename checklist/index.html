@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="description" content="Checklist to buy, register, and ride a 2018 BMW G 310 R.">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="G 310 R">
+<meta name="format-detection" content="telephone=no">
+<title>G 310 R: Buy, Register, Ride</title>
+<link rel="icon" href="../favicon-32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #5b6573;
+    --note: #7a8492;
+    --line: #d5dbe3;
+    --bg: #eef1f5;
+    --card: #fff;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.35;
+    touch-action: manipulation;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(255, 255, 255, 0.96);
+    -webkit-backdrop-filter: saturate(1.2) blur(10px);
+    backdrop-filter: saturate(1.2) blur(10px);
+    border-bottom: 1px solid var(--line);
+    padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left));
+  }
+  .headline { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  h1 { margin: 0; font-size: 1.45rem; line-height: 1.15; letter-spacing: -0.3px; }
+  .sub { margin: 4px 0 0; color: var(--muted); font-size: 1.05rem; }
+  #reset {
+    flex: none;
+    margin-top: 1px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f3f5f8;
+    color: #3a4452;
+    font: 600 15px/1 inherit;
+    cursor: pointer;
+  }
+  #reset:active { background: #e6e9ee; }
+  #reset:focus-visible { outline: 3px solid #8fb4dc; outline-offset: 2px; }
+  .deal { margin: 8px 0 12px; color: var(--muted); font-size: 0.95rem; }
+  .overall { display: flex; align-items: center; gap: 10px; }
+  #overall-text {
+    min-width: 4.6em;
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .bar {
+    flex: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: #e4e8ee;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: #2e7d6b;
+  }
+  main.wrap {
+    padding: 16px calc(16px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  }
+  .phase {
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 0 0 14px;
+  }
+  .phase-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+    padding: 12px 14px;
+    border: none;
+    color: #fff;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+  }
+  .phase-head:focus-visible { outline: 3px solid #fff; outline-offset: -4px; }
+  .p1 .phase-head { background: #2f5d8a; }
+  .p2 .phase-head { background: #2e7d6b; }
+  .p3 .phase-head { background: #b5651d; }
+  .p4 .phase-head { background: #7b4b94; }
+  .p5 .phase-head { background: #a23b4a; }
+  .p6 .phase-head { background: #3d6e3a; }
+  .num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex: none;
+  }
+  .titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .name { font-weight: 700; font-size: 17px; line-height: 1.2; }
+  .when { font-weight: 400; font-size: 13px; opacity: 0.92; }
+  .meta { display: flex; align-items: center; gap: 8px; flex: none; }
+  .count {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    padding: 5px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .chev {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(45deg);
+    margin-top: -4px;
+    flex: none;
+  }
+  .phase-head[aria-expanded="false"] .chev {
+    transform: rotate(-45deg);
+    margin-top: 4px;
+  }
+  .task + .task { border-top: 1px solid #eef1f5; }
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    position: relative;
+    min-height: 48px;
+    padding: 11px 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item:active { background: #f3f6fa; }
+  .item input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+  }
+  .box {
+    width: 28px;
+    height: 28px;
+    margin-top: 1px;
+    border: 2px solid #3a4452;
+    border-radius: 7px;
+    background: #fff;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .item input:checked + .box {
+    background: #1c2430;
+    border-color: #1c2430;
+  }
+  .item input:checked + .box::after {
+    content: "";
+    width: 7px;
+    height: 12px;
+    border: solid #fff;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .item input:focus-visible + .box {
+    outline: 3px solid #8fb4dc;
+    outline-offset: 2px;
+  }
+  .copy { font-size: 16.5px; line-height: 1.35; padding-top: 3px; }
+  .t { font-weight: 700; }
+  .note { color: var(--note); font-size: 14px; font-weight: 400; }
+  .subs {
+    margin: 0 10px 8px 46px;
+    border-left: 2px solid #e4e8ee;
+  }
+  .subs .item {
+    min-height: 44px;
+    padding: 8px 10px 8px 12px;
+  }
+  .subs .box {
+    width: 24px;
+    height: 24px;
+    border-width: 1.5px;
+    border-color: #7a8492;
+    border-radius: 6px;
+  }
+  .subs .copy { font-size: 15px; color: #2c3440; }
+  .item.done { background: #f6f7f9; }
+  .item.done .copy {
+    color: #7a8492;
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+  }
+  .item.done .note { color: #9aa3ae; }
+  footer {
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    color: var(--note);
+    font-size: 13.5px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  footer a, .map-link { color: #2f5d8a; }
+  .map-link { font-size: 14px; font-weight: 600; }
+  .noscript {
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <div class="headline">
+      <div>
+        <h1>G 310 R: Buy, Register, Ride</h1>
+        <p class="sub">Buy, register, ride</p>
+      </div>
+      <button type="button" id="reset">Reset</button>
+    </div>
+    <p class="deal">2018 BMW G 310 R, private sale, $2,500</p>
+    <div class="overall">
+      <span id="overall-text">0/0</span>
+      <div class="bar" id="bar" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-label="Overall progress">
+        <div class="bar-fill" id="bar-fill"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <noscript><p class="noscript">Turn on JavaScript to use this checklist. Checks are saved only in this browser.</p></noscript>
+  <div id="phases"></div>
+  <footer>
+    <span>Prices are estimates. Updated Sep 27, 2026.</span>
+    <a class="map-link" href="../">Parking map</a>
+  </footer>
+</main>
+<script>
+"use strict";
+
+var STORAGE_KEY = "g310r-checklist-v1";
+
+var PHASES = [
+  {
+    id: "before",
+    num: "1",
+    tone: "p1",
+    title: "Before the Deal",
+    when: "now to Oct 6",
+    tasks: [
+      {
+        id: "before-confirm",
+        title: "Confirm plan with the seller",
+        subs: [
+          { id: "before-confirm-visit", text: "The seller's mechanic visit on Oct 6, then pre-purchase inspection, then $2,500 cash" },
+          { id: "before-confirm-title-photo", text: "Ask for a photo of the title (check VIN, no lien)" },
+          { id: "before-confirm-keys-plates", text: "Confirm spare key and that the seller removes the plates at sale" }
+        ]
+      },
+      {
+        id: "before-ppi",
+        title: "Book the pre-purchase inspection at Top Dead Center (Tarrytown)",
+        subs: [
+          { id: "before-ppi-price", text: "Ask price and an opening the week of Oct 6" },
+          { id: "before-ppi-hold", text: "Ask if they'll hold the bike a few hours while you go to the DMV" },
+          { id: "before-ppi-ny", text: "Ask if they do NY state inspections" }
+        ]
+      },
+      {
+        id: "before-money",
+        title: "Line up money",
+        subs: [
+          { id: "before-money-cash", text: "$2,500 cash (or meet at a bank)" },
+          { id: "before-money-tax", text: "NYC sales tax plus DMV registration and plate fees", note: "(tax about $220 at 8.875%)" },
+          { id: "before-money-inspect-fee", text: "Inspection fee" }
+        ]
+      },
+      {
+        id: "before-dmv-reservation",
+        title: "Book a DMV reservation for inspection day",
+        note: "(White Plains or Yonkers)"
+      },
+      {
+        id: "before-mv82",
+        title: "Print and pre-fill form MV-82",
+        note: "(leave VIN blank)"
+      }
+    ]
+  },
+  {
+    id: "purchase",
+    num: "2",
+    tone: "p2",
+    title: "Inspection and Purchase Day",
+    tasks: [
+      {
+        id: "day-mechanic",
+        title: "Mechanic checks",
+        subs: [
+          { id: "day-valves", text: "Valve clearance", note: "(service due around 12k miles, bike has about 9,925)" },
+          { id: "day-bearings", text: "Steering head bearings" },
+          { id: "day-tires", text: "Tires (age and tread), brakes, chain and sprockets" },
+          { id: "day-drops", text: "Signs of drops (scrapes on bar ends, levers, engine covers)" },
+          { id: "day-fit", text: "Sit on it for fit, and learn where the battery is (under the seat)" }
+        ]
+      },
+      {
+        id: "day-paperwork",
+        title: "If it passes, pay and get paperwork",
+        subs: [
+          { id: "day-title", text: "Signed title (VIN matches the bike and the seller's identification)" },
+          { id: "day-bill", text: "Bill of sale signed by both" },
+          { id: "day-keys", text: "Both keys" },
+          { id: "day-plates", text: "The seller takes the plates" }
+        ]
+      },
+      {
+        id: "day-insurance",
+        title: "Buy insurance with the real VIN",
+        note: "(Progressive quote about $624 to $745/yr)",
+        subs: [
+          { id: "day-insurance-card", text: "Save the insurance card on phone and print a copy" }
+        ]
+      }
+    ]
+  },
+  {
+    id: "dmv",
+    num: "3",
+    tone: "p3",
+    title: "DMV and Ride Home",
+    tasks: [
+      {
+        id: "dmv-bring",
+        title: "Bring to DMV",
+        subs: [
+          { id: "dmv-documents", text: "Signed title, bill of sale, MV-82, driver license, insurance card, payment" }
+        ]
+      },
+      { id: "dmv-plates", title: "Get plates and registration at the counter" },
+      { id: "dmv-mount", title: "Back to Top Dead Center, mount plates" },
+      { id: "dmv-ride-home", title: "Ride home before dark", note: "(sunset about 6:45pm in early October)" },
+      { id: "dmv-safety", title: "NY safety inspection", rest: "if the sticker is expired or close" }
+    ]
+  },
+  {
+    id: "gear",
+    num: "4",
+    tone: "p4",
+    title: "Gear",
+    when: "before first real ride",
+    tasks: [
+      {
+        id: "gear-owned",
+        title: "Already owned",
+        note: "(check off)",
+        subs: [
+          { id: "gear-helmet", text: "Helmet" },
+          { id: "gear-hoodie", text: "Armored hoodie" },
+          { id: "gear-gloves", text: "Gloves" }
+        ]
+      },
+      { id: "gear-back-protector", title: "Back protector", rest: "(Alpinestars Nucleon KR-CELLi)", note: "about $50 to $60" },
+      { id: "gear-shoes", title: "Armored riding shoes", note: "(Skechers are the weak spot)" },
+      { id: "gear-jeans", title: "Riding jeans", rest: "(REV'IT Newmont LF, 30x34)" },
+      { id: "gear-earplugs", title: "Filtered earplugs", note: "$20 to $30" }
+    ]
+  },
+  {
+    id: "setup",
+    num: "5",
+    tone: "p5",
+    title: "Set Up the Bike",
+    tasks: [
+      {
+        id: "setup-locks",
+        title: "Lock kit and cover",
+        subs: [
+          { id: "setup-disc-lock", text: "Disc lock plus chain" },
+          { id: "setup-cover", text: "Cover, with the lock run through the cover strap" }
+        ]
+      },
+      { id: "setup-tender", title: "Battery Tender Junior", note: "about $30" },
+      {
+        id: "setup-tools",
+        title: "Basic tools",
+        subs: [
+          { id: "setup-sockets", text: "Metric sockets, hex and Torx bits" },
+          { id: "setup-torque", text: "Torque wrench, blue threadlocker" }
+        ]
+      },
+      { id: "setup-windscreen", title: "Windscreen", rest: "(MRA or Givi)", note: "optional, about $100" },
+      { id: "setup-parknyc", title: "Download ParkNYC", rest: "and set up a parking plan (home and office)" },
+      { id: "setup-sliders", title: "Spring: frame sliders or crash bars", note: "(about $100 to $250, bring to shop or DIY with torque wrench)" }
+    ]
+  },
+  {
+    id: "rides",
+    num: "6",
+    tone: "p6",
+    title: "First Rides",
+    tasks: [
+      {
+        id: "rides-lot",
+        title: "Parking lot practice",
+        subs: [
+          { id: "rides-turns", text: "Slow turns and U-turns" },
+          { id: "rides-braking", text: "Emergency braking" }
+        ]
+      },
+      { id: "rides-local", title: "Short local rides", rest: ", then first commute to the office" },
+      {
+        id: "rides-weekly",
+        title: "Weekly checks",
+        subs: [
+          { id: "rides-pressure", text: "Tire pressure" },
+          { id: "rides-chain", text: "Chain lube and slack" },
+          { id: "rides-lights", text: "Lights" }
+        ]
+      },
+      {
+        id: "rides-build",
+        title: "Build up",
+        subs: [
+          { id: "rides-highway", text: "Highway ride" },
+          { id: "rides-rain", text: "Rain ride" },
+          { id: "rides-long-day", text: "250-mile day" },
+          { id: "rides-overnight", text: "Overnight trip" }
+        ]
+      },
+      { id: "rides-vero", title: "Decide on the Thanksgiving ride to Vero Beach", note: "by early November" }
+    ]
+  }
+];
+
+var taskById = new Map();
+var parentById = new Map();
+var knownIds = new Set();
+
+PHASES.forEach(function (phase) {
+  phase.tasks.forEach(function (task) {
+    taskById.set(task.id, task);
+    knownIds.add(task.id);
+    (task.subs || []).forEach(function (sub) {
+      parentById.set(sub.id, task);
+      knownIds.add(sub.id);
+    });
+  });
+});
+
+function setOn(id, on) {
+  if (on) state[id] = true;
+  else delete state[id];
+}
+
+function loadState() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    var next = {};
+    Object.keys(parsed).forEach(function (id) {
+      if (parsed[id] === true && knownIds.has(id)) next[id] = true;
+    });
+    return next;
+  } catch (err) {
+    return {};
+  }
+}
+
+function reconcile() {
+  PHASES.forEach(function (phase) {
+    phase.tasks.forEach(function (task) {
+      if (!task.subs || !task.subs.length) return;
+      if (state[task.id]) {
+        task.subs.forEach(function (sub) { state[sub.id] = true; });
+      }
+      var all = task.subs.every(function (sub) { return !!state[sub.id]; });
+      setOn(task.id, all);
+    });
+  });
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+var state = loadState();
+reconcile();
+save();
+
+function el(tag, cls) {
+  var node = document.createElement(tag);
+  if (cls) node.className = cls;
+  return node;
+}
+
+function fillCopy(copy, item) {
+  if (item.title) {
+    var title = el("span", "t");
+    title.textContent = item.title;
+    copy.appendChild(title);
+  }
+  if (item.rest) {
+    var gap = item.title && !/^[,.]/.test(item.rest) ? " " : "";
+    copy.appendChild(document.createTextNode(gap + item.rest));
+  }
+  if (item.text) copy.appendChild(document.createTextNode(item.text));
+  if (item.note) {
+    var note = el("span", "note");
+    note.textContent = (item.title || item.text || item.rest ? " " : "") + item.note;
+    copy.appendChild(note);
+  }
+}
+
+function renderItem(item, isSub) {
+  var label = el("label", "item" + (isSub ? " sub" : " main"));
+  var input = document.createElement("input");
+  input.type = "checkbox";
+  input.dataset.id = item.id;
+  var box = el("span", "box");
+  box.setAttribute("aria-hidden", "true");
+  var copy = el("span", "copy");
+  fillCopy(copy, item);
+  label.appendChild(input);
+  label.appendChild(box);
+  label.appendChild(copy);
+  return label;
+}
+
+function renderTask(task) {
+  var wrap = el("div", "task");
+  wrap.appendChild(renderItem(task, false));
+  if (task.subs && task.subs.length) {
+    var subs = el("div", "subs");
+    task.subs.forEach(function (sub) { subs.appendChild(renderItem(sub, true)); });
+    wrap.appendChild(subs);
+  }
+  return wrap;
+}
+
+function paint(id) {
+  var input = document.querySelector('input[data-id="' + id + '"]');
+  if (!input) return;
+  var on = !!state[id];
+  input.checked = on;
+  input.closest(".item").classList.toggle("done", on);
+}
+
+function refresh() {
+  var doneAll = 0;
+  var totalAll = 0;
+  PHASES.forEach(function (phase) {
+    var done = 0;
+    var total = 0;
+    phase.tasks.forEach(function (task) {
+      total += 1;
+      if (state[task.id]) done += 1;
+      paint(task.id);
+      (task.subs || []).forEach(function (sub) {
+        total += 1;
+        if (state[sub.id]) done += 1;
+        paint(sub.id);
+      });
+    });
+    var count = document.querySelector('[data-phase-count="' + phase.id + '"]');
+    if (count) count.textContent = done + "/" + total;
+    doneAll += done;
+    totalAll += total;
+  });
+  document.getElementById("overall-text").textContent = doneAll + "/" + totalAll;
+  var bar = document.getElementById("bar");
+  bar.setAttribute("aria-valuemax", String(totalAll));
+  bar.setAttribute("aria-valuenow", String(doneAll));
+  var pct = totalAll ? (doneAll / totalAll) * 100 : 0;
+  document.getElementById("bar-fill").style.width = pct + "%";
+}
+
+function render() {
+  var root = document.getElementById("phases");
+  PHASES.forEach(function (phase) {
+    var section = el("section", "phase " + phase.tone);
+    section.dataset.phase = phase.id;
+    var head = document.createElement("button");
+    head.type = "button";
+    head.className = "phase-head";
+    head.setAttribute("aria-expanded", "true");
+    head.setAttribute("aria-controls", "body-" + phase.id);
+    var num = el("span", "num");
+    num.textContent = phase.num;
+    var titles = el("span", "titles");
+    var name = el("span", "name");
+    name.textContent = phase.title;
+    titles.appendChild(name);
+    if (phase.when) {
+      var when = el("span", "when");
+      when.textContent = phase.when;
+      titles.appendChild(when);
+    }
+    var meta = el("span", "meta");
+    var count = el("span", "count");
+    count.dataset.phaseCount = phase.id;
+    count.textContent = "0/0";
+    var chev = el("span", "chev");
+    chev.setAttribute("aria-hidden", "true");
+    meta.appendChild(count);
+    meta.appendChild(chev);
+    head.appendChild(num);
+    head.appendChild(titles);
+    head.appendChild(meta);
+    var body = el("div", "phase-body");
+    body.id = "body-" + phase.id;
+    phase.tasks.forEach(function (task) { body.appendChild(renderTask(task)); });
+    head.addEventListener("click", function () {
+      var open = head.getAttribute("aria-expanded") === "true";
+      head.setAttribute("aria-expanded", open ? "false" : "true");
+      body.hidden = open;
+    });
+    section.appendChild(head);
+    section.appendChild(body);
+    root.appendChild(section);
+  });
+  refresh();
+}
+
+document.getElementById("phases").addEventListener("change", function (event) {
+  var input = event.target;
+  if (!input || input.type !== "checkbox") return;
+  var id = input.dataset.id;
+  var on = input.checked;
+  var task = taskById.get(id);
+  if (task && task.subs && task.subs.length) {
+    setOn(id, on);
+    task.subs.forEach(function (sub) { setOn(sub.id, on); });
+  } else {
+    setOn(id, on);
+    var parent = parentById.get(id);
+    if (parent) setOn(parent.id, parent.subs.every(function (sub) { return !!state[sub.id]; }));
+  }
+  save();
+  refresh();
+});
+
+document.getElementById("reset").addEventListener("click", function () {
+  if (!window.confirm("Reset the checklist? Every check on this phone will be cleared.")) return;
+  state = {};
+  save();
+  refresh();
+});
+
+render();
+</script>
+</body>
+</html>
