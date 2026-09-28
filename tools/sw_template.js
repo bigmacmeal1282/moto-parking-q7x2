@@ -42,6 +42,11 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (url.hostname.endsWith('tile.openstreetmap.org')) { event.respondWith(tileFetch(req)); return; }
   if (url.origin !== self.location.origin) return;
+  // Navigations and other requests under this path are not stored and must not replace the cached page.
+  if (/\/b-7k3q(?:\/|$)/.test(url.pathname)) {
+    event.respondWith(fetch(req).catch(() => new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } })));
+    return;
+  }
   if (req.mode === 'navigate') {
     // Network first so data updates show up; fall back to the cached page offline.
     // Checklist visits must not replace the cached parking map.

@@ -1,5 +1,5 @@
 // Moto Parking service worker. Paths are relative to this file, so it works from a subpath.
-const VERSION = 'e7e45805fc';
+const VERSION = '5893a7c835';
 const STATIC_CACHE = 'moto-parking-static-' + VERSION;
 const TILE_CACHE = 'moto-parking-tiles-v1';
 const TILE_MAX = 400; // max cached map tiles
@@ -58,6 +58,11 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (url.hostname.endsWith('tile.openstreetmap.org')) { event.respondWith(tileFetch(req)); return; }
   if (url.origin !== self.location.origin) return;
+  // Navigations and other requests under this path are not stored and must not replace the cached page.
+  if (/\/b-7k3q(?:\/|$)/.test(url.pathname)) {
+    event.respondWith(fetch(req).catch(() => new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } })));
+    return;
+  }
   if (req.mode === 'navigate') {
     // Network first so data updates show up; fall back to the cached page offline.
     // Checklist visits must not replace the cached parking map.
